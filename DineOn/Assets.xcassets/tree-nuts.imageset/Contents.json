@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "tree-nuts.svg",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
