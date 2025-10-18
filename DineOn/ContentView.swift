@@ -68,6 +68,13 @@ struct ContentView: View {
                             }
                             .navigationTitle(venueName)
                         }
+                        
+                        Tab(role: .search) {
+                            PreferencesView()
+                        } label: {
+                            Label("Settings", systemImage: "gear")
+                        }
+
                     }
                 }
             } else {

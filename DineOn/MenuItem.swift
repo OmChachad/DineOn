@@ -23,7 +23,7 @@ enum MenuNodeType: String, Codable {
 }
 
 /// Optional dietary flags (from JS `data-preferences`)
-enum DietaryPreference: String, Codable, Attribute {
+enum DietaryPreference: String, Codable, Attribute, CaseIterable {
     case vegan
     case vegetarian
     case halalIngredients = "halal-ingredients"
@@ -31,7 +31,7 @@ enum DietaryPreference: String, Codable, Attribute {
 }
 
 /// Common allergen categories (from JS `data-allergens`)
-enum Allergen: String, Codable, Attribute {
+enum Allergen: String, Codable, Attribute, CaseIterable {
     case dairy, eggs, soy, gluten, sesame, fish, shellfish, pork, peanuts, treeNuts = "tree-nuts"
     case notAnalyzed = "not-analyzed"
     case unknown

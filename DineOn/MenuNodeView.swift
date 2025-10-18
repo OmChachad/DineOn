@@ -8,13 +8,17 @@
 import SwiftUI
 
 struct MenuNodeView: View {
+    @StateObject private var preferences = Preferences.shared
+    
     let node: MenuNode
     
     var body: some View {
         switch node.type {
         case .item:
-            MenuItemView(node: node)
-                .frame(maxWidth: .infinity, alignment: .leading)
+            if itemFitsPreferences(node) {
+                MenuItemView(node: node)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+            }
         case .header, .timeHeader:
             IndentedDisclosureGroup(expandedByDefault: true) {
                 if let items = node.items {
@@ -31,6 +35,38 @@ struct MenuNodeView: View {
                     .multilineTextAlignment(.leading)
             }
         }
+    }
+    
+    func itemFitsPreferences(_ node: MenuNode) -> Bool {
+        // Allergens: reject if the food contains any selected allergen
+        guard node.allergens?.contains(.notAnalyzed) == false else {
+            return true
+        }
+        
+        let selectedAllergens = preferences.selectedAllergens.compactMap { Allergen(rawValue: $0) }
+        
+        if (node.allergens ?? []).contains(where: { selectedAllergens.contains($0) }) {
+            return false
+        }
+        
+        // Dietary preferences: only check if user has enabled dietary restrictions
+        if preferences.hasDietaryRestrictions {
+            let selectedPreferences = preferences.selectedDietaryPreferences.compactMap { DietaryPreference(rawValue: $0) }
+            let nodePreferences = node.preferences ?? []
+            // Food must meet *all* selected dietary preferences
+            for pref in selectedPreferences {
+                switch pref {
+                case .vegetarian:
+                    return nodePreferences.contains(.vegetarian) || nodePreferences.contains(.vegan)
+                case .vegan:
+                    return nodePreferences.contains(.vegan)
+                default:
+                    return nodePreferences.contains(pref)
+                }
+            }
+        }
+        
+        return true
     }
 }
 
