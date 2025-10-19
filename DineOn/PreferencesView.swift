@@ -11,6 +11,7 @@ struct PreferencesView: View {
     @StateObject private var preferences = Preferences.shared
     
     @State private var newKeyword: String = ""
+    @State private var newFavoriteDish: String = ""
     
     var body: some View {
         Form {
@@ -73,12 +74,12 @@ struct PreferencesView: View {
                 }
                 
                 HStack {
-                    TextField("Add Favorite Dish", text: $newKeyword)
+                    TextField("Add Favorite Dish", text: $newFavoriteDish)
                     Button(action: {
-                        let trimmedDish = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+                        let trimmedDish = newFavoriteDish.trimmingCharacters(in: .whitespacesAndNewlines)
                         guard !trimmedDish.isEmpty else { return }
                         preferences.favoriteDishes.insert(trimmedDish)
-                        newKeyword = ""
+                        newFavoriteDish = ""
                     }) {
                         Image(systemName: "plus.circle.fill")
                             .foregroundColor(.accentColor)
