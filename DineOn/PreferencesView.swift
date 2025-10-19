@@ -15,16 +15,18 @@ struct PreferencesView: View {
     var body: some View {
         Form {
             Section("Allergens") {
-                ForEach(Allergen.allCases.filter({ $0 != .notAnalyzed && $0 != .unknown }), id: \.self) { allergen in
-                    Toggle(isOn: Binding(
-                        get: { preferences.isAllergenSelected(allergen) },
-                        set: { _ in preferences.toggleAllergen(allergen) }
-                    )) {
-                        HStack {
-                            imageFor(allergen)
-                                .resizable()
-                                .frame(width: 20, height: 20)
-                            Text(allergen.rawValue)
+                DisclosureGroup("Allergens") {
+                    ForEach(Allergen.allCases.filter({ $0 != .notAnalyzed && $0 != .unknown }), id: \.self) { allergen in
+                        Toggle(isOn: Binding(
+                            get: { preferences.isAllergenSelected(allergen) },
+                            set: { _ in preferences.toggleAllergen(allergen) }
+                        )) {
+                            HStack {
+                                imageFor(allergen)
+                                    .resizable()
+                                    .frame(width: 20, height: 20)
+                                Text(allergen.rawValue.replacingOccurrences(of: "-", with: " ").capitalized)
+                            }
                         }
                     }
                 }
@@ -43,7 +45,7 @@ struct PreferencesView: View {
                                 imageFor(preference)
                                     .resizable()
                                     .frame(width: 20, height: 20)
-                                Text(preference.rawValue)
+                                Text(preference.rawValue.capitalized)
                             }
                         }
                     }
