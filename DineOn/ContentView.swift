@@ -66,16 +66,25 @@ struct ContentView: View {
                                         Button(action: {
                                             chosenDate = dateString
                                         }) {
-                                            Text(stringToDate(for: dateString)!.formatted(date: .abbreviated, time: .omitted))
+                                            Group {
+                                                if dateString == todaysDate {
+                                                    Text("Today")
+                                                } else {
+                                                    Text(stringToDate(for: dateString)!.formatted(.dateTime.month().day()))
+                                                }
+                                            }
                                                 .padding(8)
                                                 .foregroundColor(chosenDate == dateString ? .white : .primary)
                                                 .bold(chosenDate == dateString)
                                                 .glassEffect(.regular.tint(chosenDate == dateString ?  .accentColor : nil), in: .capsule)
                                         }
                                         .buttonStyle(.plain)
+                                        .scrollTargetLayout()
                                     }
                                 }
                             }
+                            
+                            .scrollTargetBehavior(.viewAligned)
                             .scrollClipDisabled()
                             .ignoresSafeArea(.all, edges: .horizontal)
                         }
