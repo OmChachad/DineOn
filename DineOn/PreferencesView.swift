@@ -50,6 +50,32 @@ struct PreferencesView: View {
                 }
             }
             
+            Section("Favorite Dishes") {
+                ForEach(preferences.favoriteDishes.sorted(), id: \.self) { dish in
+                    Text(dish)
+                }
+                .onDelete { indexSet in
+                    let dishesArray = Array(preferences.favoriteDishes).sorted()
+                    for index in indexSet {
+                        let dishToRemove = dishesArray[index]
+                        preferences.favoriteDishes.remove(dishToRemove)
+                    }
+                }
+                
+                HStack {
+                    TextField("Add Favorite Dish", text: $newKeyword)
+                    Button(action: {
+                        let trimmedDish = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedDish.isEmpty else { return }
+                        preferences.favoriteDishes.insert(trimmedDish)
+                        newKeyword = ""
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+            
             Section("Excluded Keywords") {
                 ForEach(preferences.excludedKeywords.sorted(), id: \.self) { keyword in
                     Text(keyword)

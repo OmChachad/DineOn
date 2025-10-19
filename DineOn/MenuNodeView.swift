@@ -17,7 +17,6 @@ struct MenuNodeView: View {
         case .item:
             if itemFitsPreferences(node) {
                 MenuItemView(node: node)
-                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         case .header, .timeHeader:
             IndentedDisclosureGroup(expandedByDefault: true) {
@@ -77,12 +76,14 @@ struct MenuNodeView: View {
 }
 
 struct MenuItemView: View {
+    @StateObject private var preferences = Preferences.shared
     let node: MenuNode
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(node.name)
-                .font(.body)
+            Group {
+                Text(node.name)
+            }
             
             HStack(spacing: 5) {
                 if let prefs = node.preferences, !prefs.isEmpty {
@@ -111,5 +112,30 @@ struct MenuItemView: View {
             }
         }
         .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .contentShape(.rect)
+        .contextMenu {
+            Button(action: {
+                if preferences.favoriteDishes.contains(node.name) {
+                    preferences.favoriteDishes.remove(node.name)
+                } else {
+                    preferences.favoriteDishes.insert(node.name)
+                }
+            }) {
+                Text(preferences.favoriteDishes.contains(node.name) ? "Remove from Favorites" : "Add to Favorites")
+                Image(systemName: preferences.favoriteDishes.contains(node.name) ? "star.fill" : "star")
+            }
+        }
+        .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? 10 : 0)
+        .background {
+            if preferences.favoriteDishes.contains(node.name) {
+                LinearGradient(colors: [Color.purple.opacity(0.3), Color.clear, Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(maxWidth: 500)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.leading, -100)
+                    .ignoresSafeArea()
+
+            }
+        }
     }
 }

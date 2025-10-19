@@ -18,6 +18,7 @@ final class Preferences: ObservableObject {
         self.selectedDietaryPreferences = Set(UserDefaults.standard.stringArray(forKey: "selectedDietaryPreferences") ?? [])
         self.excludedKeywords = Set(UserDefaults.standard.stringArray(forKey: "excludedKeywords") ?? [])
         self.hasDietaryRestrictions = UserDefaults.standard.bool(forKey: "hasDietaryRestrictions")
+        self.favoriteDishes = Set(UserDefaults.standard.stringArray(forKey: "favoriteDishes") ?? [])
     }
 
     // MARK: - Published properties
@@ -42,6 +43,12 @@ final class Preferences: ObservableObject {
     @Published var excludedKeywords: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(excludedKeywords), forKey: "excludedKeywords")
+        }
+    }
+    
+    @Published var favoriteDishes: Set<String> {
+        didSet {
+            UserDefaults.standard.set(Array(favoriteDishes), forKey: "favoriteDishes")
         }
     }
 
@@ -87,5 +94,17 @@ final class Preferences: ObservableObject {
     func isFoodExcludedByName(_ name: String) -> Bool {
         let lowerName = name.lowercased()
         return excludedKeywords.contains(where: { lowerName.contains($0) })
+    }
+    
+    func toggleFavoriteDish(_ dishName: String) {
+        if favoriteDishes.contains(dishName) {
+            favoriteDishes.remove(dishName)
+        } else {
+            favoriteDishes.insert(dishName)
+        }
+    }
+    
+    func isDishFavorited(_ dishName: String) -> Bool {
+        favoriteDishes.contains(dishName)
     }
 }
