@@ -81,7 +81,7 @@ struct PreferencesView: View {
                         newKeyword = ""
                     }) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.accentColor)
                     }
                 }
             }
@@ -107,7 +107,7 @@ struct PreferencesView: View {
                         newKeyword = ""
                     }) {
                         Image(systemName: "plus.circle.fill")
-                            .foregroundColor(.blue)
+                            .foregroundColor(.accentColor)
                     }
                 }
             }

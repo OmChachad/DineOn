@@ -70,7 +70,7 @@ struct ContentView: View {
                                                 .padding(8)
                                                 .foregroundColor(chosenDate == dateString ? .white : .primary)
                                                 .bold(chosenDate == dateString)
-                                                .glassEffect(.regular.tint(chosenDate == dateString ?  .blue : nil), in: .capsule)
+                                                .glassEffect(.regular.tint(chosenDate == dateString ?  .accentColor : nil), in: .capsule)
                                         }
                                         .buttonStyle(.plain)
                                     }
