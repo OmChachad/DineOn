@@ -7,14 +7,16 @@
 
 
 import SwiftUI
-internal import Combine
+import Combine
 
 final class Preferences: ObservableObject {
     static let shared = Preferences()
+    
     private init() {
         // Load saved values from UserDefaults
         self.selectedAllergens = Set(UserDefaults.standard.stringArray(forKey: "selectedAllergens") ?? [])
         self.selectedDietaryPreferences = Set(UserDefaults.standard.stringArray(forKey: "selectedDietaryPreferences") ?? [])
+        self.excludedKeywords = Set(UserDefaults.standard.stringArray(forKey: "excludedKeywords") ?? [])
         self.hasDietaryRestrictions = UserDefaults.standard.bool(forKey: "hasDietaryRestrictions")
     }
 
@@ -37,6 +39,12 @@ final class Preferences: ObservableObject {
         }
     }
 
+    @Published var excludedKeywords: Set<String> {
+        didSet {
+            UserDefaults.standard.set(Array(excludedKeywords), forKey: "excludedKeywords")
+        }
+    }
+
     // MARK: - Convenience methods
     func toggleAllergen(_ allergen: Allergen) {
         if selectedAllergens.contains(allergen.rawValue) {
@@ -53,12 +61,31 @@ final class Preferences: ObservableObject {
             selectedDietaryPreferences.insert(preference.rawValue)
         }
     }
-
+    
     func isAllergenSelected(_ allergen: Allergen) -> Bool {
         selectedAllergens.contains(allergen.rawValue)
     }
 
     func isDietaryPreferenceSelected(_ preference: DietaryPreference) -> Bool {
         selectedDietaryPreferences.contains(preference.rawValue)
+    }
+
+    func toggleExcludedKeyword(_ keyword: String) {
+        let lower = keyword.lowercased()
+        if excludedKeywords.contains(lower) {
+            excludedKeywords.remove(lower)
+        } else {
+            excludedKeywords.insert(lower)
+        }
+    }
+
+    func isKeywordExcluded(_ keyword: String) -> Bool {
+        excludedKeywords.contains(keyword.lowercased())
+    }
+
+    /// Returns true if this food name matches any excluded keyword
+    func isFoodExcludedByName(_ name: String) -> Bool {
+        let lowerName = name.lowercased()
+        return excludedKeywords.contains(where: { lowerName.contains($0) })
     }
 }

@@ -7,7 +7,7 @@
 
 import Foundation
 import WebKit
-internal import Combine
+import Combine
 
 class DiningFetcher: ObservableObject {
     static let shared = DiningFetcher()

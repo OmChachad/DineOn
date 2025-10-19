@@ -43,6 +43,12 @@ struct MenuNodeView: View {
             return true
         }
         
+        for keyword in preferences.excludedKeywords {
+            if node.name.lowercased().contains(keyword.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)) {
+                return false
+            }
+        }
+        
         let selectedAllergens = preferences.selectedAllergens.compactMap { Allergen(rawValue: $0) }
         
         if (node.allergens ?? []).contains(where: { selectedAllergens.contains($0) }) {

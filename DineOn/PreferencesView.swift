@@ -9,7 +9,9 @@ import SwiftUI
 
 struct PreferencesView: View {
     @StateObject private var preferences = Preferences.shared
-
+    
+    @State private var newKeyword: String = ""
+    
     var body: some View {
         Form {
             Section("Allergens") {
@@ -44,6 +46,32 @@ struct PreferencesView: View {
                                 Text(preference.rawValue)
                             }
                         }
+                    }
+                }
+            }
+            
+            Section("Excluded Keywords") {
+                ForEach(preferences.excludedKeywords.sorted(), id: \.self) { keyword in
+                    Text(keyword)
+                }
+                .onDelete { indexSet in
+                    let keywordsArray = Array(preferences.excludedKeywords).sorted()
+                    for index in indexSet {
+                        let keywordToRemove = keywordsArray[index]
+                        preferences.excludedKeywords.remove(keywordToRemove)
+                    }
+                }
+                
+                HStack {
+                    TextField("Add Keyword", text: $newKeyword)
+                    Button(action: {
+                        let trimmedKeyword = newKeyword.trimmingCharacters(in: .whitespacesAndNewlines)
+                        guard !trimmedKeyword.isEmpty else { return }
+                        preferences.excludedKeywords.insert(trimmedKeyword)
+                        newKeyword = ""
+                    }) {
+                        Image(systemName: "plus.circle.fill")
+                            .foregroundColor(.blue)
                     }
                 }
             }
