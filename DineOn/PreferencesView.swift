@@ -14,6 +14,14 @@ struct PreferencesView: View {
     
     var body: some View {
         Form {
+            Section {
+                VStack {
+                    Spacer()
+                        .frame(height: 20)
+                }
+                .listRowBackground(Color.clear)
+            }
+            
             Section("Allergens") {
                 DisclosureGroup("Allergens") {
                     ForEach(Allergen.allCases.filter({ $0 != .notAnalyzed && $0 != .unknown }), id: \.self) { allergen in
