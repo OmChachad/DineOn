@@ -42,14 +42,14 @@ struct MenuNodeView: View {
     
     func itemFitsPreferences(_ node: MenuNode) -> Bool {
         // Allergens: reject if the food contains any selected allergen
-        guard node.allergens?.contains(.notAnalyzed) == false else {
-            return true
-        }
-        
         for keyword in preferences.excludedKeywords {
             if node.name.lowercased().contains(keyword.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)) {
                 return false
             }
+        }
+        
+        guard node.allergens?.contains(.notAnalyzed) == false else {
+            return true
         }
         
         let selectedAllergens = preferences.selectedAllergens.compactMap { Allergen(rawValue: $0) }
