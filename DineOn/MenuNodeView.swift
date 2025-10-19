@@ -13,27 +13,31 @@ struct MenuNodeView: View {
     let node: MenuNode
     
     var body: some View {
-        switch node.type {
-        case .item:
-            if itemFitsPreferences(node) {
-                MenuItemView(node: node)
-            }
-        case .header, .timeHeader:
-            IndentedDisclosureGroup(expandedByDefault: true) {
-                if let items = node.items {
+        Group {
+            switch node.type {
+            case .item:
+                if itemFitsPreferences(node) {
+                    MenuItemView(node: node)
+                }
+            case .header, .timeHeader:
+                IndentedDisclosureGroup(expandedByDefault: true) {
+                    if let items = node.items {
                         ForEach(items, id: \.name) { item in
                             MenuNodeView(node: item)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                } label: {
+                    Text(node.name)
+                        .font(node.type == .timeHeader ? .headline : .title3)
+                        .bold()
+                        .foregroundColor(.primary)
+                        .multilineTextAlignment(.leading)
                 }
-            } label: {
-                Text(node.name)
-                    .font(node.type == .timeHeader ? .headline : .title3)
-                    .bold()
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
             }
         }
+        
+            .environmentObject(preferences)
     }
     
     func itemFitsPreferences(_ node: MenuNode) -> Bool {
@@ -125,6 +129,22 @@ struct MenuItemView: View {
                 Text(preferences.favoriteDishes.contains(node.name) ? "Remove from Favorites" : "Add to Favorites")
                 Image(systemName: preferences.favoriteDishes.contains(node.name) ? "star.fill" : "star")
             }
+            
+            
+                // Add to excluded keywords
+                Button(action: {
+                    preferences.excludedKeywords.insert(node.name)
+                }) {
+                    Text("Don't show this again.")
+                    Image(systemName: "hand.thumbsdown.fill")
+                }
+        } preview: {
+            MenuItemView(node: node)
+                .padding()
+                .padding(.trailing, 50)
+                .background(Color(UIColor.systemBackground))
+                .cornerRadius(10)
+                .frame(maxWidth: .infinity, alignment: .leading)
         }
         .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? 10 : 0)
         .background {
