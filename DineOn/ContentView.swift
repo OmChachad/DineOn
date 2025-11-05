@@ -22,7 +22,7 @@ struct ContentView: View {
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }
-    
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
     
     var body: some View {
         Group {
@@ -49,7 +49,6 @@ struct ContentView: View {
                                 }
                             }
                         }
-                        
                         
                         Tab(role: .search) {
                             PreferencesView()
@@ -93,6 +92,8 @@ struct ContentView: View {
                     .navigationTitle("DineOn")
                     .navigationBarTitleDisplayMode(.inline)
                 }
+                
+                .environment(\.horizontalSizeClass, .compact)
             } else {
                 Text("No dining menu available.")
             }
