@@ -47,6 +47,9 @@ struct ContentView: View {
                                     .safeAreaPadding(.top, 40)
                                     .contentMargins(.top, 30, for: .scrollIndicators)
                                 }
+                                .refreshable {
+                                    diningFetcher.refreshMenu(for: chosenDate)
+                                }
                             }
                         }
                         

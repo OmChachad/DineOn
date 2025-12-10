@@ -76,7 +76,7 @@ let mealOrder: [String: Int] = [
 // MARK: - Wrapper
 
 struct DiningMenu: Codable {
-    let data: DiningData
+    var data: DiningData
 
     /// All available dates in the dataset.
     var availableDates: [String] {
