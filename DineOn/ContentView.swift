@@ -56,7 +56,13 @@ struct ContentView: View {
                             Label("Settings", systemImage: "gear")
                         }
                     }
-                    
+                    .toolbar {
+                        ToolbarItem(placement: .topBarTrailing) {
+                            ShareLink(item: menu.exportForLLM(date: chosenDate)) {
+                                Label("Export to LLM", systemImage: "square.and.arrow.up")
+                            }
+                        }
+                    }
                     .safeAreaInset(edge: .top) {
                         HStack {
                             ScrollView(.horizontal, showsIndicators: false) {
