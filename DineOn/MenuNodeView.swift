@@ -141,11 +141,13 @@ struct MenuItemView: View {
                 }
         } preview: {
             MenuItemView(node: node)
-                .padding()
-                .padding(.trailing, 50)
+                .lineLimit(3)
+                .padding(10)
+                .padding(.trailing, 100)
                 .background(Color(UIColor.systemBackground))
-                .cornerRadius(10)
+                .cornerRadius(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? -10 : 0)
         }
         .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? 10 : 0)
         .background {
