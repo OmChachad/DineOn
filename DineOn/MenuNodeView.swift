@@ -80,6 +80,7 @@ struct MenuNodeView: View {
 }
 
 struct MenuItemView: View {
+    @Environment(\.colorScheme) private var colorScheme
     @StateObject private var preferences = Preferences.shared
     let node: MenuNode
     
@@ -149,11 +150,18 @@ struct MenuItemView: View {
         .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? 10 : 0)
         .background {
             if preferences.favoriteDishes.contains(node.name) {
-                LinearGradient(colors: [Color.purple.opacity(0.3), Color.clear, Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
-                    .frame(maxWidth: 500)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.leading, -100)
-                    .ignoresSafeArea()
+                HStack(spacing: 0) {
+                    RoundedRectangle(cornerRadius: 10, style: .continuous)
+                        .frame(width: 3.5)
+                        .foregroundStyle(.pink)
+                        .padding(.leading)
+                    
+                    LinearGradient(colors: [Color.pink.opacity(colorScheme == .dark ? 0.3 : 0.2), Color.clear, Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(maxWidth: 500)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .padding(.leading, -30)
+                .ignoresSafeArea()
 
             }
         }
