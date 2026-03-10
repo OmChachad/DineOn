@@ -19,19 +19,6 @@ class LocationManager: NSObject, ObservableObject {
     @Published var userLocation: CLLocation?
     @Published var authorizationStatus: CLAuthorizationStatus = .notDetermined
     
-    // MARK: - Venue Coordinates
-    
-    struct DiningVenueLocation {
-        let name: String
-        let coordinate: CLLocation
-    }
-    
-    static let venueLocations: [DiningVenueLocation] = [
-        DiningVenueLocation(name: "USC Village", coordinate: CLLocation(latitude: 34.025889, longitude: -118.286062)),
-        DiningVenueLocation(name: "Parkside Residential", coordinate: CLLocation(latitude: 34.018722, longitude: -118.291131)),
-        DiningVenueLocation(name: "Everybody's Kitchen", coordinate: CLLocation(latitude: 34.021435, longitude: -118.282249)),
-    ]
-    
     /// Approximate center of the USC campus for the proximity threshold check.
     private static let campusCenter = CLLocation(latitude: 34.0224, longitude: -118.2851)
     
@@ -81,7 +68,7 @@ class LocationManager: NSObject, ObservableObject {
     
     /// Distance in meters from a given location to a named venue. Returns .greatestFiniteMagnitude if unknown.
     private func distance(to venueName: String, from location: CLLocation) -> CLLocationDistance {
-        guard let venue = Self.venueLocations.first(where: { $0.name == venueName }) else {
+        guard let venue = DiningVenue.from(apiName: venueName) else {
             return .greatestFiniteMagnitude
         }
         return location.distance(from: venue.coordinate)
