@@ -11,84 +11,80 @@ struct ContentView: View {
     @ObservedObject var diningFetcher = DiningFetcher.shared
     @ObservedObject var preferences = Preferences.shared
     @ObservedObject var locationManager = LocationManager.shared
-    
-    
+
     @State private var chosenDate: String = {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }()
-    
+
     @State private var chosenMeal: String? = nil
-    
+
     var todaysDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }
-    
-    /// Returns the most appropriate current meal based on time of day (uses same thresholds as MealView).
+
+    /// Returns the most appropriate current meal based on time of day.
     var currentMealForTimeOfDay: String {
         let hour = Calendar.current.component(.hour, from: Date())
         switch hour {
-        case 0...10:
-            return "Breakfast"
-        case 11...16:
-            return "Lunch"
-        default:
-            return "Dinner"
+        case 0...10: return "Breakfast"
+        case 11...16: return "Lunch"
+        default: return "Dinner"
         }
     }
-    
+
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
-    
-    /// Returns the effective chosen meal, falling back to the best match for the current time.
+
     func effectiveMeal(for availableMeals: [String]) -> String {
-        if let chosen = chosenMeal, availableMeals.contains(chosen) {
-            return chosen
-        }
+        if let chosen = chosenMeal, availableMeals.contains(chosen) { return chosen }
         let preferred = currentMealForTimeOfDay
-        if availableMeals.contains(preferred) {
-            return preferred
-        }
-        // Brunch can substitute for Breakfast/Lunch
-        if (preferred == "Breakfast" || preferred == "Lunch"), availableMeals.contains("Brunch") {
-            return "Brunch"
-        }
+        if availableMeals.contains(preferred) { return preferred }
+        if (preferred == "Breakfast" || preferred == "Lunch"), availableMeals.contains("Brunch") { return "Brunch" }
         return availableMeals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }.first ?? preferred
     }
     
+    @State private var chosenTab: String = ""
+
     var body: some View {
         Group {
             if diningFetcher.isLoading {
                 ProgressView("Fetching Dining Menu...")
             } else if let menu = diningFetcher.diningMenu {
-                
                 NavigationStack {
-                    TabView {
+                    TabView(selection: $chosenTab) {
                         ForEach(sortedVenues(from: menu), id: \.self) { venueName in
-                            Tab(betterVenueName(for: venueName), systemImage: betterVenueIcon(for: venueName)) {
+                            let venue = DiningVenue(rawValue: venueName)
+                            
+                            Tab(venue?.shortName ?? venueName, systemImage: venue?.iconName ?? "fork.knife", value: venueName) {
                                 let availableMeals = menu.meals(for: chosenDate, venue: venueName).sorted {
                                     (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99)
                                 }
                                 let activeMeal = effectiveMeal(for: availableMeals)
-                                
-                                ScrollView {
-                                    LazyVStack(pinnedViews: [.sectionHeaders]) {
-                                        MealContentView(meal: activeMeal, venueName: venueName, chosenDate: chosenDate)
-                                            .padding()
+
+                                Group {
+                                    if availableMeals.isEmpty {
+                                        ContentUnavailableView(
+                                            "No Menu Available",
+                                            systemImage: "fork.knife.circle",
+                                            description: Text("No meals are being served at \(venue?.shortName ?? venueName) on this day.")
+                                        )
+                                    } else {
+                                        ScrollView {
+                                            LazyVStack(pinnedViews: [.sectionHeaders]) {
+                                                MealContentView(meal: activeMeal, venueName: venueName, chosenDate: chosenDate)
+                                                    .padding()
+                                            }
+//                                            .padding(.top, 50)
+                                        }
+                                        .contentMargins(.top, 50, for: .scrollIndicators)
+                                        .contentMargins(.top, 50, for: .scrollContent)
                                     }
-                                    .contentMargins(.top, 30, for: .scrollIndicators)
                                 }
                                 .refreshable {
                                     await diningFetcher.refreshMenu(for: chosenDate)
-                                }
-                                .safeAreaBar(edge: .top) {
-                                    VStack(spacing: 6) {
-                                        dateSelector(menu: menu)
-                                        activeFiltersBar()
-                                    }
-                                    .padding(.horizontal, 20)
                                 }
                                 .safeAreaBar(edge: .bottom) {
                                     mealSelector(availableMeals: availableMeals, activeMeal: activeMeal)
@@ -97,11 +93,24 @@ struct ContentView: View {
                             }
                         }
                         
-                        Tab(role: .search) {
+
+                        Tab(value: "Settings", role: .search) {
                             PreferencesView()
                         } label: {
                             Label("Settings", systemImage: "gear")
                         }
+                    }
+                    .safeAreaBar(edge: .top) {
+                        Group {
+                            if chosenTab != "Settings" {
+                                VStack(spacing: 6) {
+                                    dateSelector(menu: menu)
+                                    activeFiltersBar()
+                                }
+                                .transition(.blurReplace)
+                            }
+                        }
+                        .padding(.horizontal, 20)
                     }
                     .toolbar {
                         ToolbarItem(placement: .topBarTrailing) {
@@ -113,7 +122,6 @@ struct ContentView: View {
                     .navigationTitle("DineOn")
                     .navigationBarTitleDisplayMode(.inline)
                 }
-                
                 .environment(\.horizontalSizeClass, .compact)
             } else {
                 Text("No dining menu available.")
@@ -126,15 +134,16 @@ struct ContentView: View {
         .onChange(of: chosenDate) { _, _ in
             chosenMeal = nil
         }
+        .animation(.default, value: chosenTab)
     }
-    
+
     // MARK: - Selector Views
-    
+
     @ViewBuilder
     func dateSelector(menu: DiningMenu) -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
-                ForEach(menu.availableDates.sorted().filter( { $0 >= todaysDate } ), id: \.self) { dateString in
+                ForEach(menu.availableDates.sorted().filter({ $0 >= todaysDate }), id: \.self) { dateString in
                     Button(action: {
                         chosenDate = dateString
                     }) {
@@ -145,10 +154,10 @@ struct ContentView: View {
                                 Text(stringToDate(for: dateString)!.formatted(.dateTime.month().day()))
                             }
                         }
-                            .padding(8)
-                            .foregroundColor(chosenDate == dateString ? .white : .primary)
-                            .bold(chosenDate == dateString)
-                            .glassEffect(.regular.tint(chosenDate == dateString ?  .accentColor : nil), in: .capsule)
+                        .padding(8)
+                        .foregroundColor(chosenDate == dateString ? .white : .primary)
+                        .bold(chosenDate == dateString)
+                        .glassEffect(.regular.tint(chosenDate == dateString ? .accentColor : nil), in: .capsule)
                     }
                     .buttonStyle(.plain)
                     .scrollTargetLayout()
@@ -159,7 +168,7 @@ struct ContentView: View {
         .scrollClipDisabled()
         .ignoresSafeArea(.all, edges: .horizontal)
     }
-    
+
     @ViewBuilder
     func activeFiltersBar() -> some View {
         let activeAllergens = Allergen.allCases.filter {
@@ -168,26 +177,21 @@ struct ContentView: View {
         let activeDietaryPrefs = DietaryPreference.allCases.filter {
             $0 != .unknown && preferences.hasDietaryRestrictions && preferences.isDietaryPreferenceSelected($0)
         }
-        
+
         let hasActiveFilters = !activeAllergens.isEmpty || !activeDietaryPrefs.isEmpty
-        
+
         if hasActiveFilters {
             HStack(spacing: 10) {
                 ForEach(activeAllergens, id: \.self) { allergen in
                     HStack(spacing: 4) {
-                        imageFor(allergen)
-                            .resizable()
-                            .frame(width: 14, height: 14)
+                        imageFor(allergen).resizable().frame(width: 14, height: 14)
                         Text(allergen.rawValue.replacingOccurrences(of: "-", with: " ").capitalized)
                             .font(.caption2)
                     }
                 }
-                
                 ForEach(activeDietaryPrefs, id: \.self) { pref in
                     HStack(spacing: 4) {
-                        imageFor(pref)
-                            .resizable()
-                            .frame(width: 14, height: 14)
+                        imageFor(pref).resizable().frame(width: 14, height: 14)
                         Text(pref.rawValue.replacingOccurrences(of: "-", with: " ").capitalized)
                             .font(.caption2)
                     }
@@ -198,78 +202,49 @@ struct ContentView: View {
             .padding(.top, 5)
         }
     }
-    
+
     @ViewBuilder
     func mealSelector(availableMeals: [String], activeMeal: String) -> some View {
-            HStack {
-                ForEach(availableMeals, id: \.self) { meal in
-                    Button(action: {
-                        chosenMeal = meal
-                    }) {
-                        Text(meal)
-                            .padding(8)
-                            .foregroundColor(activeMeal == meal ? .white : .primary)
-                            .bold(activeMeal == meal)
-                            .frame(maxWidth: .infinity)
-                            .glassEffect(.regular.tint(activeMeal == meal ? .accentColor : nil).interactive(), in: .capsule)
-                    }
-                    .buttonStyle(.plain)
-                    .scrollTargetLayout()
+        HStack {
+            ForEach(availableMeals, id: \.self) { meal in
+                Button(action: {
+                    chosenMeal = meal
+                }) {
+                    Text(meal)
+                        .padding(8)
+                        .foregroundColor(activeMeal == meal ? .white : .primary)
+                        .bold(activeMeal == meal)
+                        .frame(maxWidth: .infinity)
+                        .glassEffect(.regular.tint(activeMeal == meal ? .accentColor : nil).interactive(), in: .capsule)
                 }
+                .buttonStyle(.plain)
+            }
         }
         .scrollTargetBehavior(.viewAligned)
         .scrollClipDisabled()
         .ignoresSafeArea(.all, edges: .horizontal)
     }
-    
-    func betterVenueName(for venue: String) -> String {
-        switch venue {
-        case "Everybody's Kitchen":
-            return "EVK"
-        case "Parkside Residential":
-            return "Parkside"
-        case "USC Village":
-            return "Village"
-        default:
-            return venue
-        }
-    }
-    
-    func betterVenueIcon(for venue: String) -> String {
-        switch venue {
-        case "Everybody's Kitchen":
-            return "person.3.fill"
-        case "Parkside Residential":
-            return "fork.knife"
-        case "USC Village":
-            return "building.columns.fill"
-        default:
-            return "fork.knife"
-        }
-    }
-    
+
     func stringToDate(for string: String) -> Date? {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string)
     }
-    
-    /// Returns venues sorted by proximity if the user is near campus, otherwise alphabetical.
+
     func sortedVenues(from menu: DiningMenu) -> [String] {
         let venues = menu.venues(for: chosenDate)
-        if let proximitySorted = locationManager.sortedVenuesByProximity(venues) {
-            return proximitySorted
-        }
+        if let proximitySorted = locationManager.sortedVenuesByProximity(venues) { return proximitySorted }
         return venues.sorted()
     }
 }
 
-/// Shows the stations and items for a single meal at a venue (replaces the old MealView loop).
+// MARK: - MealContentView
+
 struct MealContentView: View {
     var meal: MealName
     var venueName: VenueName
     var chosenDate: String
-    
+
     var body: some View {
         ForEach(DiningFetcher.shared.diningMenu?.stations(for: chosenDate, venue: venueName, meal: meal) ?? [], id: \.self) { station in
             IndentedDisclosureGroup(expandedByDefault: true) {
@@ -283,6 +258,7 @@ struct MealContentView: View {
                     .font(.title2)
                     .bold()
                     .foregroundColor(.primary)
+                    .multilineTextAlignment(.leading)
             }
         }
     }

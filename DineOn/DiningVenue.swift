@@ -15,6 +15,15 @@ enum DiningVenue: String, CaseIterable {
     case parkside  = "Parkside Residential"
     case evk       = "Everybody's Kitchen"
 
+    /// The slug used by the USC Hospitality API (`get-res-dining-menus/{apiID}`).
+    nonisolated var apiID: String {
+        switch self {
+        case .village:  return "university-village"
+        case .parkside: return "parkside"
+        case .evk:      return "evk"
+        }
+    }
+
     /// Short, user-facing label shown in the tab bar.
     var shortName: String {
         switch self {

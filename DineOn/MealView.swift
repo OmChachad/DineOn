@@ -11,21 +11,21 @@ struct MealView: View {
     var meal: MealName
     var venueName: VenueName
     var chosenDate: String
-    
+
     func expiredMeals() -> [String] {
         guard chosenDate == {
             let formatter = DateFormatter()
             formatter.dateFormat = "yyyy-MM-dd"
             return formatter.string(from: Date.now)
         }() else { return [] }
-        
+
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "HH"
-        
+
         let hourOfDay = Int(dateFormatter.string(from: Date.now))
-        
+
         guard let hourOfDay else { return [] }
-        
+
         switch (hourOfDay) {
         case 1...10:
             return []
@@ -41,7 +41,7 @@ struct MealView: View {
     var isExpired: Bool {
         expiredMeals().contains(meal)
     }
-    
+
     @ViewBuilder
     var body: some View {
         if !isExpired {
@@ -68,15 +68,12 @@ struct MealView: View {
                         Text(meal)
                     }
                 }
-                
                 .font(.title)
                 .bold()
                 .foregroundColor(.primary)
                 .fontWidth(.expanded)
             }
-            
-            
-            
+
             Divider()
                 .bold()
         }

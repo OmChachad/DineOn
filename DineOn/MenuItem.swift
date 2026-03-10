@@ -163,30 +163,4 @@ struct DiningMenu: Codable {
     }
 }
 
-// MARK: - Parser
 
-enum DiningMenuParser {
-    static func parse(from any: Any) throws -> DiningMenu {
-        let data = try JSONSerialization.data(withJSONObject: any, options: [])
-        let decoder = JSONDecoder()
-        let decoded = try decoder.decode(DiningData.self, from: data)
-        return DiningMenu(data: decoded)
-    }
-
-    static func parse(from string: String) throws -> DiningMenu {
-        let cleaned = cleanAppleStyleString(string)
-        guard let data = cleaned.data(using: .utf8) else {
-            throw NSError(domain: "DiningMenuParser", code: 1, userInfo: [NSLocalizedDescriptionKey: "Invalid UTF-8"])
-        }
-        let decoded = try JSONDecoder().decode(DiningData.self, from: data)
-        return DiningMenu(data: decoded)
-    }
-
-    private static func cleanAppleStyleString(_ raw: String) -> String {
-        raw
-            .replacingOccurrences(of: " = ", with: ": ")
-            .replacingOccurrences(of: ";", with: ",")
-            .replacingOccurrences(of: "(", with: "[")
-            .replacingOccurrences(of: ")", with: "]")
-    }
-}

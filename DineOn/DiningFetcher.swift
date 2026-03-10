@@ -6,42 +6,41 @@
 //
 
 import Foundation
-import WebKit
 import Combine
+
+// MARK: - DiningFetcher
 
 @MainActor
 class DiningFetcher: ObservableObject {
     static let shared = DiningFetcher()
-    
+
     @Published var diningMenu: DiningMenu? = nil
     @Published var isLoading: Bool = false
-    
+
     private let cacheFileName = "diningMenuCache.json"
-    
+    private let baseURL = "https://hospitality.usc.edu/wp-json/hsp-api/v1/get-res-dining-menus"
+
     private var cacheFileURL: URL {
         let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
         return documentsDirectory.appendingPathComponent(cacheFileName)
     }
-    
+
     private init() {
         loadCachedMenu()
     }
-    
-    let page = WebPage()
-    
-    /// Loads the cached menu from disk if available
+
+    // MARK: - Cache
+
     private func loadCachedMenu() {
         guard FileManager.default.fileExists(atPath: cacheFileURL.path) else {
             print("📦 No cached menu found")
             return
         }
-        
+
         do {
             let data = try Data(contentsOf: cacheFileURL)
-            let decoder = JSONDecoder()
-            let cachedMenu = try decoder.decode(DiningMenu.self, from: data)
-            
-            // Check if the cached menu is still valid
+            let cachedMenu = try JSONDecoder().decode(DiningMenu.self, from: data)
+
             if isMenuValid(cachedMenu) {
                 self.diningMenu = cachedMenu
                 print("📦 Loaded valid cached menu with dates:", cachedMenu.availableDates)
@@ -54,23 +53,20 @@ class DiningFetcher: ObservableObject {
             clearCache()
         }
     }
-    
-    /// Saves the current menu to disk
+
     private func saveCachedMenu() {
         guard let menu = diningMenu else { return }
-        
         do {
             let encoder = JSONEncoder()
             encoder.outputFormatting = .prettyPrinted
             let data = try encoder.encode(menu)
             try data.write(to: cacheFileURL, options: .atomic)
-            print("💾 Menu cached successfully to:", cacheFileURL.path)
+            print("💾 Menu cached successfully")
         } catch {
             print("❌ Failed to cache menu:", error)
         }
     }
-    
-    /// Clears the cached menu from disk
+
     private func clearCache() {
         do {
             if FileManager.default.fileExists(atPath: cacheFileURL.path) {
@@ -81,429 +77,185 @@ class DiningFetcher: ObservableObject {
             print("❌ Failed to clear cache:", error)
         }
     }
-    
-    /// Checks if the provided menu is still valid for today
+
     private func isMenuValid(_ menu: DiningMenu) -> Bool {
-        let today = Calendar.current.startOfDay(for: Date())
-        let todayString = formatDateString(today)
-        
-        // Check if today's date is in the available dates
+        let todayString = formatDateString(Calendar.current.startOfDay(for: Date()))
         return menu.availableDates.contains(todayString)
     }
-    
-    /// Formats a date to YYYY-MM-DD string
+
     private func formatDateString(_ date: Date) -> String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: date)
     }
-    
-    /// Fetches the dining menu, using cache if valid
+
+    // MARK: - Date Helpers
+
+    private func currentWeekDates() -> [String] {
+        let calendar = Calendar.current
+        let today = Date()
+        let weekday = calendar.component(.weekday, from: today) // 1 = Sunday
+
+        guard let startOfWeek = calendar.date(byAdding: .day, value: -(weekday - 1), to: today) else {
+            return [formatDateString(today)]
+        }
+
+        return (0...7).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: startOfWeek)
+                .map { formatDateString($0) }
+        }
+    }
+
+    // MARK: - API Fetching
+
+    nonisolated private func apiURL(venue: DiningVenue, dateString: String) -> URL? {
+        let parts = dateString.split(separator: "-")
+        guard parts.count == 3 else { return nil }
+        var comps = URLComponents(string: "\(baseURL)/\(venue.apiID)")
+        comps?.queryItems = [
+            URLQueryItem(name: "y", value: String(parts[0])),
+            URLQueryItem(name: "m", value: String(parts[1])),
+            URLQueryItem(name: "d", value: String(parts[2]))
+        ]
+        return comps?.url
+    }
+
+    nonisolated private func fetchVenueMenu(venue: DiningVenue, dateString: String) async throws -> [MealName: [StationName: [MenuNode]]]? {
+        guard let url = apiURL(venue: venue, dateString: dateString) else { return nil }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        guard (response as? HTTPURLResponse)?.statusCode == 200, !data.isEmpty else { return nil }
+
+        guard let apiResponse = try? decodeDiningAPIResponse(from: data),
+              let meals = apiResponse.meals, !meals.isEmpty else { return nil }
+
+        return transformToAppFormat(meals: meals)
+    }
+
+    nonisolated private func transformToAppFormat(meals: [DiningAPIMeal]) -> [MealName: [StationName: [MenuNode]]] {
+        var result: [MealName: [StationName: [MenuNode]]] = [:]
+        for meal in meals {
+            guard !meal.stations.isEmpty else { continue } // skip meals not served today
+            var stationsDict: [StationName: [MenuNode]] = [:]
+            for station in meal.stations {
+                let nodes: [MenuNode]
+                if let subtitle = station.subtitle, !subtitle.isEmpty {
+                    let children = station.menu.map { menuNodeFrom($0) }
+                    nodes = [MenuNode(name: subtitle, type: .header, allergens: nil, preferences: nil, disclaimers: nil, items: children)]
+                } else {
+                    nodes = station.menu.map { menuNodeFrom($0) }
+                }
+                stationsDict[station.station] = nodes
+            }
+            result[meal.name] = stationsDict
+        }
+        return result
+    }
+
+    nonisolated private func menuNodeFrom(_ item: DiningAPIMenuItem) -> MenuNode {
+        let allergens = item.allergens.compactMap { Allergen(rawValue: $0) }
+        let preferences = item.preferences.compactMap { DietaryPreference(rawValue: $0) }
+        return MenuNode(
+            name: item.item,
+            type: .item,
+            allergens: allergens.isEmpty ? nil : allergens,
+            preferences: preferences.isEmpty ? nil : preferences,
+            disclaimers: nil,
+            items: nil
+        )
+    }
+
+    // MARK: - Public API
+
+    /// Fetches the dining menu for the current week, using cache if valid.
     func fetchDiningMenu(forceRefresh: Bool = false) {
-        // If not forcing refresh and menu is still valid, don't fetch
         if !forceRefresh, let menu = diningMenu, isMenuValid(menu) {
             print("📦 Using cached menu - still valid for today")
             return
         }
-        
-        // If we get here, either there's no cache or it's expired
-        if diningMenu != nil && !isMenuValid(diningMenu!) {
-            print("🔄 Cached menu expired, fetching new data...")
-        } else if !forceRefresh {
-            print("🔄 No valid cache, fetching menu data...")
-        } else {
-            print("🔄 Force refresh requested, fetching new data...")
-        }
-        
-        let urlString = URL(
-            string: "https://hospitality.usc.edu/dining-hall-menus/"
-        )!
-        
-        var request = URLRequest(url: urlString)
-        request.attribution = .user
-        
-        page.load(urlString)
-        
+
         Task {
             isLoading = true
-            while page.isLoading {
-                try? await Task.sleep(for: .milliseconds(100))
-            }
-            
-            let js = #"""
-            console.log("🍽️ Starting USC Dining Hall WEEKLY menu extraction...");
+            defer { isLoading = false }
 
-            const wait = (ms) => new Promise(r => setTimeout(r, ms));
+            let weekDates = currentWeekDates()
+            var allData: DiningData = [:]
 
-            function getCurrentWeekDates() {
-              const today = new Date();
-              const day = today.getDay();
-              const start = new Date(today);
-              start.setDate(today.getDate() - day);
-              const end = new Date(start);
-              end.setDate(start.getDate() + 7);
-              const dates = [];
-              for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-                const yyyy = d.getFullYear();
-                const mm = String(d.getMonth() + 1).padStart(2, '0');
-                const dd = String(d.getDate()).padStart(2, '0');
-                dates.push(`${yyyy}-${mm}-${dd}`);
-              }
-              return dates;
-            }
-
-            const disclaimerKeywords = [
-              "may contain", "contains traces", "processed in a facility", "manufactured in a facility",
-              "shared equipment", "cross contamination", "nuts and peanuts are used", "nuts are used",
-              "peanuts are used", "not analyzed"
-            ].map(s => s.toLowerCase());
-            const nutRegex = /\b(peanut|peanuts|nut|nuts|tree[- ]?nut|almond|walnut|cashew|pecan)\b/i;
-
-            function isDisclaimerText(text) {
-              if (!text) return false;
-              const t = text.trim().toLowerCase();
-              return disclaimerKeywords.some(k => t.includes(k)) ||
-                     (nutRegex.test(t) && /(used|may|contain)/.test(t)) ||
-                     /^\*.*\*$/.test(text.trim());
-            }
-
-            const timeHeaderRegex = /\b(opens|starts|closes)\s+at\b/i;
-            const isTimeHeader = (text) => timeHeaderRegex.test(text.trim());
-
-            function looksLikeHeader(text) {
-              if (!text) return false;
-              if (isDisclaimerText(text) || isTimeHeader(text)) return false;
-              const words = text.trim().split(/\s+/);
-              if (words.length <= 6 && /^[A-Z0-9 '&\-/()]+$/.test(text.trim())) return true;
-              const letters = text.replace(/[^A-Za-z]/g, "");
-              if (letters.length > 0 && text === text.toUpperCase() && words.length <= 5) return true;
-              return false;
-            }
-
-            function safeParseArray(str) {
-              if (!str) return [];
-              try { return JSON.parse(str); } catch {
-                const match = str.match(/"([^"]+)"/g);
-                return match ? match.map(m => m.replace(/"/g, "")) : [];
-              }
-            }
-
-            function extractCurrentMenu() {
-              const venueTitle = document.querySelector('.js-venue-title')?.textContent.trim() || 'Unknown Venue';
-              const menus = {};
-
-              document.querySelectorAll('.meal-container').forEach(meal => {
-                const mealName = meal.querySelector('.h4')?.textContent.trim() || 'Unknown Meal';
-                menus[mealName] = {};
-
-                meal.querySelectorAll('.station').forEach(station => {
-                  const stationName = station.querySelector('.title')?.textContent.trim() || 'Unnamed Station';
-                  const subtitle = station.querySelector('.subtitle')?.textContent.trim() || null;
-
-                  const items = [];
-                  let currentHeader = subtitle
-                    ? { name: subtitle, type: "header", items: [], disclaimers: [] }
-                    : null;
-                  if (currentHeader) items.push(currentHeader);
-
-                  let currentTimeHeader = null;
-
-                  station.querySelectorAll('.js-menu-item').forEach(li => {
-                    const text = li.childNodes[0]?.textContent.trim() || li.textContent.trim();
-                    const allergens = safeParseArray(li.dataset.allergens || '[]');
-                    const preferences = safeParseArray(li.dataset.preferences || '[]');
-                    const hasLabels = allergens.length > 0 || preferences.length > 0;
-
-                    if (isDisclaimerText(text)) {
-                      const d = text;
-                      if (currentTimeHeader) {
-                        currentTimeHeader.disclaimers = currentTimeHeader.disclaimers || [];
-                        currentTimeHeader.disclaimers.push(d);
-                      } else if (currentHeader) {
-                        currentHeader.disclaimers.push(d);
-                      }
-                      return;
+            await withTaskGroup(of: (String, DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
+                for dateString in weekDates {
+                    for venue in DiningVenue.allCases {
+                        group.addTask { [self] in
+                            let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
+                            return (dateString, venue, result)
+                        }
                     }
-
-                    if (isTimeHeader(text)) {
-                      currentTimeHeader = { name: text, type: "time-header", items: [], disclaimers: [] };
-                      if (currentHeader) currentHeader.items.push(currentTimeHeader);
-                      else items.push(currentTimeHeader);
-                      return;
-                    }
-
-                    if (!hasLabels && looksLikeHeader(text)) {
-                      currentHeader = { name: text, type: "header", items: [], disclaimers: [] };
-                      items.push(currentHeader);
-                      currentTimeHeader = null;
-                      return;
-                    }
-
-                    const itemObj = { name: text, type: "item", allergens, preferences, disclaimers: [] };
-                    if (currentTimeHeader) currentTimeHeader.items.push(itemObj);
-                    else if (currentHeader) currentHeader.items.push(itemObj);
-                    else items.push(itemObj);
-                  });
-
-                  menus[mealName][stationName] = items;
-                });
-              });
-
-              return { venue: venueTitle, menu: menus };
-            }
-
-            const dateInput = document.querySelector('#date');
-            if (!dateInput) throw new Error("❌ Date input not found.");
-
-            const buttons = {
-              evk: document.querySelector('button[data-value="evk"]'),
-              parkside: document.querySelector('button[data-value="parkside"]'),
-              village: document.querySelector('button[data-value="university-village"]'),
-            };
-
-            const allMenus = {};
-            const weekDates = getCurrentWeekDates();
-
-            for (const dateStr of weekDates) {
-              console.log(`📅 Fetching ${dateStr}...`);
-              dateInput.value = dateStr;
-              dateInput.dispatchEvent(new Event('input', { bubbles: true }));
-              dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-              await wait(700);
-
-              allMenus[dateStr] = {};
-
-              for (const [key, btn] of Object.entries(buttons)) {
-                if (!btn) continue;
-                btn.click();
-                btn.dispatchEvent(new Event('click', { bubbles: true }));
-                btn.dispatchEvent(new Event('change', { bubbles: true }));
-                await wait(800);
-
-                const { venue, menu } = extractCurrentMenu();
-                allMenus[dateStr][venue] = menu;
-                console.log(`✅ ${venue} done for ${dateStr}`);
-              }
-            }
-
-            console.log("🍴 Weekly extraction complete.");
-            return allMenus;
-            """#
-
-            do {
-                
-                let result = try await page.callJavaScript(js)
-                do {
-                    self.diningMenu = try DiningMenuParser.parse(from: result as Any)
-                    
-                    // Save to disk after successful fetch
-                    self.saveCachedMenu()
-                    
-                    // Reschedule daily notification with updated menu data
-                    if Preferences.shared.notificationsEnabled {
-                        NotificationManager.shared.scheduleDailyNotification()
-                    }
-
-                    if let firstDate = self.diningMenu?.availableDates.first {
-                        print("✅ Menu fetched and cached. Available dates:", self.diningMenu?.availableDates ?? [])
-                        let venues = self.diningMenu?.venues(for: firstDate) ?? []
-                        print("Venues on \(firstDate):", venues)
-                    }
-                } catch {
-                    print("❌ Parsing failed:", error)
                 }
-            } catch {
-                print("❌ Error executing JavaScript: \(error)")
+
+                for await (dateString, venue, venueMenu) in group {
+                    if let venueMenu {
+                        if allData[dateString] == nil { allData[dateString] = [:] }
+                        allData[dateString]?[venue.rawValue] = venueMenu
+                    }
+                }
             }
-            
-            isLoading = false
+
+            guard !allData.isEmpty else {
+                print("❌ No menu data fetched from API")
+                return
+            }
+
+            self.diningMenu = DiningMenu(data: allData)
+            saveCachedMenu()
+
+            if Preferences.shared.notificationsEnabled {
+                NotificationManager.shared.scheduleDailyNotification()
+            }
+
+            print("✅ Menu fetched. Available dates:", self.diningMenu?.availableDates ?? [])
         }
     }
-    
+
     /// Refreshes the menu for a specific date (expects "yyyy-MM-dd").
-    /// This will fetch only the requested date across all venues, update the in-memory
-    /// `diningMenu.data[dateString]` and immediately save the cache to disk.
     func refreshMenu(for dateString: String) async {
         isLoading = true
         defer { isLoading = false }
-        
-        print("🔄 Force-refreshing menus for date:", dateString)
-        
-        let url = URL(string: "https://hospitality.usc.edu/dining-hall-menus/")!
-        page.load(url)
-            
-            // wait for the page to finish loading
-            while page.isLoading {
-                try? await Task.sleep(for: .milliseconds(120))
-            }
-            
-            // JavaScript that extracts the menu for a single date (buttons iterate venues)
-            // Uses top-level await (not wrapped in a sync IIFE) so WKWebView resolves the result properly
-            var js = #"""
-            const wait = (ms) => new Promise(r => setTimeout(r, ms));
 
-            function safeParseArray(str) {
-              if (!str) return [];
-              try { return JSON.parse(str); } catch {
-                const match = str.match(/"([^"]+)"/g);
-                return match ? match.map(m => m.replace(/"/g, "")) : [];
-              }
-            }
+        print("🔄 Refreshing menus for date:", dateString)
 
-            const disclaimerKeywords = [
-              "may contain", "contains traces", "processed in a facility", "manufactured in a facility",
-              "shared equipment", "cross contamination", "nuts and peanuts are used", "nuts are used",
-              "peanuts are used", "not analyzed"
-            ].map(s => s.toLowerCase());
+        var dateVenueData: [VenueName: [MealName: [StationName: [MenuNode]]]] = [:]
 
-            const nutRegex = /\b(peanut|peanuts|nut|nuts|tree[- ]?nut|almond|walnut|cashew|pecan)\b/i;
-            function isDisclaimerText(text) {
-              if (!text) return false;
-              const t = text.trim().toLowerCase();
-              return disclaimerKeywords.some(k => t.includes(k)) ||
-                     (nutRegex.test(t) && /(used|may|contain)/.test(t)) ||
-                     /^\*.*\*$/.test(text.trim());
-            }
-
-            const timeHeaderRegex = /\b(opens|starts|closes)\s+at\b/i;
-            const isTimeHeader = (text) => timeHeaderRegex.test(text.trim());
-
-            function looksLikeHeader(text) {
-              if (!text) return false;
-              if (isDisclaimerText(text) || isTimeHeader(text)) return false;
-              const words = text.trim().split(/\s+/);
-              if (words.length <= 6 && /^[A-Z0-9 '&\-/()]+$/.test(text.trim())) return true;
-              const letters = text.replace(/[^A-Za-z]/g, "");
-              if (letters.length > 0 && text === text.toUpperCase() && words.length <= 5) return true;
-              return false;
-            }
-
-            function extractMenuForVenue() {
-              const venueTitle = document.querySelector('.js-venue-title')?.textContent.trim() || 'Unknown Venue';
-              const menus = {};
-
-              document.querySelectorAll('.meal-container').forEach(meal => {
-                const mealName = meal.querySelector('.h4')?.textContent.trim() || 'Unknown Meal';
-                menus[mealName] = {};
-
-                meal.querySelectorAll('.station').forEach(station => {
-                  const stationName = station.querySelector('.title')?.textContent.trim() || 'Unnamed Station';
-                  const subtitle = station.querySelector('.subtitle')?.textContent.trim() || null;
-
-                  const items = [];
-                  let currentHeader = subtitle ? { name: subtitle, type: "header", items: [], disclaimers: [] } : null;
-                  if (currentHeader) items.push(currentHeader);
-
-                  let currentTimeHeader = null;
-
-                  station.querySelectorAll('.js-menu-item').forEach(li => {
-                    const text = li.childNodes[0]?.textContent.trim() || li.textContent.trim();
-                    const allergens = safeParseArray(li.dataset.allergens || '[]');
-                    const preferences = safeParseArray(li.dataset.preferences || '[]');
-                    const hasLabels = allergens.length > 0 || preferences.length > 0;
-
-                    if (isDisclaimerText(text)) {
-                      const d = text;
-                      if (currentTimeHeader) {
-                        currentTimeHeader.disclaimers = currentTimeHeader.disclaimers || [];
-                        currentTimeHeader.disclaimers.push(d);
-                      } else if (currentHeader) {
-                        currentHeader.disclaimers.push(d);
-                      }
-                      return;
-                    }
-
-                    if (isTimeHeader(text)) {
-                      currentTimeHeader = { name: text, type: "time-header", items: [], disclaimers: [] };
-                      if (currentHeader) currentHeader.items.push(currentTimeHeader);
-                      else items.push(currentTimeHeader);
-                      return;
-                    }
-
-                    if (!hasLabels && looksLikeHeader(text)) {
-                      currentHeader = { name: text, type: "header", items: [], disclaimers: [] };
-                      items.push(currentHeader);
-                      currentTimeHeader = null;
-                      return;
-                    }
-
-                    const itemObj = { name: text, type: "item", allergens, preferences, disclaimers: [] };
-                    if (currentTimeHeader) currentTimeHeader.items.push(itemObj);
-                    else if (currentHeader) currentHeader.items.push(itemObj);
-                    else items.push(itemObj);
-                  });
-
-                  menus[mealName][stationName] = items;
-                });
-              });
-
-              return { venue: venueTitle, menu: menus };
-            }
-
-            const dateInput = document.querySelector('#date');
-            if (!dateInput) throw new Error("Date input not found");
-
-            // PLACEHOLDER replaced by Swift with the requested date string
-            dateInput.value = PLACEHOLDER_DATE;
-            dateInput.dispatchEvent(new Event('input', { bubbles: true }));
-            dateInput.dispatchEvent(new Event('change', { bubbles: true }));
-
-            const buttons = {
-              evk: document.querySelector('button[data-value="evk"]'),
-              parkside: document.querySelector('button[data-value="parkside"]'),
-              village: document.querySelector('button[data-value="university-village"]'),
-            };
-
-            const result = {};
-
-            for (const [key, btn] of Object.entries(buttons)) {
-              if (!btn) continue;
-              btn.click();
-              btn.dispatchEvent(new Event('click', { bubbles: true }));
-              btn.dispatchEvent(new Event('change', { bubbles: true }));
-              await wait(700);
-              const { venue, menu } = extractMenuForVenue();
-              result[venue] = menu;
-            }
-
-            return result;
-            """#
-            
-            // Inject the requested date string safely (wrap with quotes)
-            js = js.replacingOccurrences(of: "PLACEHOLDER_DATE", with: "\"\(dateString)\"")
-            
-            do {
-                let raw = try await page.callJavaScript(js)
-                
-                guard let venueMenus = raw as? [String: Any] else {
-                    print("❌ JavaScript returned unexpected shape for date \(dateString)")
-                    return
+        await withTaskGroup(of: (DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
+            for venue in DiningVenue.allCases {
+                group.addTask { [self] in
+                    let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
+                    return (venue, result)
                 }
-                
-                // Parse only the single-date dictionary using your existing parser
-                let singleDateDict: [String: Any] = [dateString: venueMenus]
-                let parsed = try DiningMenuParser.parse(from: singleDateDict)
-                
-                if diningMenu == nil {
-                    // no cache yet — replace entire menu with fetched one
-                    diningMenu = parsed
-                } else {
-                    // update only requested date's entry
-                    diningMenu!.data[dateString] = parsed.data[dateString]
-                }
-                
-                // Persist immediately
-                saveCachedMenu()
-                
-                // Reschedule daily notification with updated menu data
-                if Preferences.shared.notificationsEnabled {
-                    NotificationManager.shared.scheduleDailyNotification()
-                }
-                
-                print("✅ Refresh for \(dateString) complete. Cache updated.")
-                
-            } catch {
-                print("❌ refreshMenu(for:) failed for \(dateString):", error)
             }
+
+            for await (venue, venueMenu) in group {
+                if let venueMenu {
+                    dateVenueData[venue.rawValue] = venueMenu
+                }
+            }
+        }
+
+        guard !dateVenueData.isEmpty else {
+            print("❌ No menu data fetched for \(dateString)")
+            return
+        }
+
+        if diningMenu == nil {
+            diningMenu = DiningMenu(data: [dateString: dateVenueData])
+        } else {
+            diningMenu!.data[dateString] = dateVenueData
+        }
+
+        saveCachedMenu()
+
+        if Preferences.shared.notificationsEnabled {
+            NotificationManager.shared.scheduleDailyNotification()
+        }
+
+        print("✅ Refresh for \(dateString) complete.")
     }
 }
