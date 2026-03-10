@@ -54,13 +54,23 @@ final class NotificationManager {
             return
         }
         
-        // Find today's date string
+        // Determine which date the notification will actually fire on.
+        // If the chosen time has already passed today, the calendar trigger
+        // will fire tomorrow, so we need tomorrow's menu — not today's.
+        let now = Date()
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: preferences.notificationTime)
+        let todayAtNotificationTime = calendar.date(bySettingHour: timeComponents.hour ?? 0,
+                                                     minute: timeComponents.minute ?? 0,
+                                                     second: 0, of: now)!
+        let targetDate = todayAtNotificationTime > now ? now : calendar.date(byAdding: .day, value: 1, to: now)!
+        
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
-        let todayString = formatter.string(from: Date())
+        let targetDateString = formatter.string(from: targetDate)
         
-        // Find matches
-        let matches = menu.favoriteMatches(for: todayString, favorites: preferences.favoriteDishes)
+        // Find matches for the date the notification will fire on
+        let matches = menu.favoriteMatches(for: targetDateString, favorites: preferences.favoriteDishes)
         
         guard !matches.isEmpty else {
             print("🔕 No favorite dishes on today's menu, not scheduling notification.")
@@ -110,8 +120,7 @@ final class NotificationManager {
             content.body = bodyLines.joined(separator: "\n")
         }
         
-        // Create a calendar trigger for the user's chosen time, repeating daily
-        let timeComponents = Calendar.current.dateComponents([.hour, .minute], from: preferences.notificationTime)
+        // Create a calendar trigger for the user's chosen time
         let trigger = UNCalendarNotificationTrigger(dateMatching: timeComponents, repeats: false)
         
         let request = UNNotificationRequest(
