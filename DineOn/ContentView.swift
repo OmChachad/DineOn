@@ -10,6 +10,7 @@ import SwiftUI
 struct ContentView: View {
     @ObservedObject var diningFetcher = DiningFetcher.shared
     @ObservedObject var preferences = Preferences.shared
+    @ObservedObject var locationManager = LocationManager.shared
     
     
     @State private var chosenDate: String = {
@@ -65,7 +66,7 @@ struct ContentView: View {
                 
                 NavigationStack {
                     TabView {
-                        ForEach(menu.venues(for: chosenDate).sorted(), id: \.self) { venueName in
+                        ForEach(sortedVenues(from: menu), id: \.self) { venueName in
                             Tab(betterVenueName(for: venueName), systemImage: betterVenueIcon(for: venueName)) {
                                 let availableMeals = menu.meals(for: chosenDate, venue: venueName).sorted {
                                     (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99)
@@ -120,6 +121,7 @@ struct ContentView: View {
         }
         .task {
             DiningFetcher.shared.fetchDiningMenu()
+            locationManager.requestLocationPermission()
         }
         .onChange(of: chosenDate) { _, _ in
             chosenMeal = nil
@@ -250,6 +252,15 @@ struct ContentView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string)
+    }
+    
+    /// Returns venues sorted by proximity if the user is near campus, otherwise alphabetical.
+    func sortedVenues(from menu: DiningMenu) -> [String] {
+        let venues = menu.venues(for: chosenDate)
+        if let proximitySorted = locationManager.sortedVenuesByProximity(venues) {
+            return proximitySorted
+        }
+        return venues.sorted()
     }
 }
 
