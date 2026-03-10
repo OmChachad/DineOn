@@ -68,10 +68,10 @@ class LocationManager: NSObject, ObservableObject {
     
     /// Distance in meters from a given location to a named venue. Returns .greatestFiniteMagnitude if unknown.
     private func distance(to venueName: String, from location: CLLocation) -> CLLocationDistance {
-        guard let venue = DiningVenue.from(apiName: venueName) else {
+        guard let venue = DiningVenue(rawValue: venueName) else {
             return .greatestFiniteMagnitude
         }
-        return location.distance(from: venue.coordinate)
+        return location.distance(from: venue.location)
     }
 }
 
