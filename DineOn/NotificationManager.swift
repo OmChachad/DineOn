@@ -70,7 +70,22 @@ final class NotificationManager {
         let targetDateString = formatter.string(from: targetDate)
         
         // Find matches for the date the notification will fire on
-        let matches = menu.favoriteMatches(for: targetDateString, favorites: preferences.favoriteDishes)
+        let allMatches = menu.favoriteMatches(for: targetDateString, favorites: preferences.favoriteDishes)
+        
+        // Filter out meals that will have already expired by the time the notification fires.
+        // Uses the same thresholds as MealView: 11+ → Breakfast expired, 17+ → Lunch & Brunch expired.
+        let fireHour = timeComponents.hour ?? 0
+        let expiredMeals: Set<String> = {
+            switch fireHour {
+            case 11...16:
+                return ["Breakfast"]
+            case 17...24:
+                return ["Breakfast", "Lunch", "Brunch"]
+            default:
+                return []
+            }
+        }()
+        let matches = allMatches.filter { !expiredMeals.contains($0.meal) }
         
         guard !matches.isEmpty else {
             print("🔕 No favorite dishes on today's menu, not scheduling notification.")
