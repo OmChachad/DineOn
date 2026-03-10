@@ -10,7 +10,7 @@ import Foundation
 extension DiningMenu {
     /// Creates an LLM-friendly text export of all venues/meals/stations for a given date.
     func exportForLLM(date: String) -> String {
-        guard let venuesDict = data[date] else {
+        guard data[date] != nil else {
             return "No dining data available for \(date)."
         }
         
