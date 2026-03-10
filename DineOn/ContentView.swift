@@ -9,6 +9,7 @@ import SwiftUI
 
 struct ContentView: View {
     @ObservedObject var diningFetcher = DiningFetcher.shared
+    @ObservedObject var preferences = Preferences.shared
     
     
     @State private var chosenDate: String = {
@@ -82,8 +83,11 @@ struct ContentView: View {
                                     await diningFetcher.refreshMenu(for: chosenDate)
                                 }
                                 .safeAreaBar(edge: .top) {
-                                    dateSelector(menu: menu)
-                                        .padding(.horizontal, 20)
+                                    VStack(spacing: 6) {
+                                        dateSelector(menu: menu)
+                                        activeFiltersBar()
+                                    }
+                                    .padding(.horizontal, 20)
                                 }
                                 .safeAreaBar(edge: .bottom) {
                                     mealSelector(availableMeals: availableMeals, activeMeal: activeMeal)
@@ -152,6 +156,45 @@ struct ContentView: View {
         .scrollTargetBehavior(.viewAligned)
         .scrollClipDisabled()
         .ignoresSafeArea(.all, edges: .horizontal)
+    }
+    
+    @ViewBuilder
+    func activeFiltersBar() -> some View {
+        let activeAllergens = Allergen.allCases.filter {
+            $0 != .notAnalyzed && $0 != .unknown && preferences.isAllergenSelected($0)
+        }
+        let activeDietaryPrefs = DietaryPreference.allCases.filter {
+            $0 != .unknown && preferences.hasDietaryRestrictions && preferences.isDietaryPreferenceSelected($0)
+        }
+        
+        let hasActiveFilters = !activeAllergens.isEmpty || !activeDietaryPrefs.isEmpty
+        
+        if hasActiveFilters {
+            HStack(spacing: 10) {
+                ForEach(activeAllergens, id: \.self) { allergen in
+                    HStack(spacing: 4) {
+                        imageFor(allergen)
+                            .resizable()
+                            .frame(width: 14, height: 14)
+                        Text(allergen.rawValue.replacingOccurrences(of: "-", with: " ").capitalized)
+                            .font(.caption2)
+                    }
+                }
+                
+                ForEach(activeDietaryPrefs, id: \.self) { pref in
+                    HStack(spacing: 4) {
+                        imageFor(pref)
+                            .resizable()
+                            .frame(width: 14, height: 14)
+                        Text(pref.rawValue.replacingOccurrences(of: "-", with: " ").capitalized)
+                            .font(.caption2)
+                    }
+                }
+            }
+            .foregroundStyle(.secondary)
+            .frame(maxWidth: .infinity, alignment: .center)
+            .padding(.top, 5)
+        }
     }
     
     @ViewBuilder
