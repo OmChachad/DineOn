@@ -48,7 +48,7 @@ struct ContentView: View {
                                     .contentMargins(.top, 30, for: .scrollIndicators)
                                 }
                                 .refreshable {
-                                    diningFetcher.refreshMenu(for: chosenDate)
+                                    await diningFetcher.refreshMenu(for: chosenDate)
                                 }
                             }
                         }
