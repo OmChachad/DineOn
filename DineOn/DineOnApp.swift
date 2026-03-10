@@ -12,6 +12,12 @@ struct DineOnApp: App {
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .onAppear {
+                    // Schedule notification on launch if enabled (uses cached menu)
+                    if Preferences.shared.notificationsEnabled {
+                        NotificationManager.shared.scheduleDailyNotification()
+                    }
+                }
         }
     }
 }

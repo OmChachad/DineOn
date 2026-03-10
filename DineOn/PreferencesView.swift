@@ -61,6 +61,30 @@ struct PreferencesView: View {
                 }
             }
             
+            Section("Notifications") {
+                Toggle("Daily Favorites Alert", isOn: $preferences.notificationsEnabled)
+                    .onChange(of: preferences.notificationsEnabled) { _, enabled in
+                        if enabled {
+                            NotificationManager.shared.requestPermission { granted in
+                                if !granted {
+                                    preferences.notificationsEnabled = false
+                                } else {
+                                    NotificationManager.shared.scheduleDailyNotification()
+                                }
+                            }
+                        } else {
+                            NotificationManager.shared.cancelNotification()
+                        }
+                    }
+                
+                if preferences.notificationsEnabled {
+                    DatePicker("Notification Time", selection: $preferences.notificationTime, displayedComponents: .hourAndMinute)
+                        .onChange(of: preferences.notificationTime) { _, _ in
+                            NotificationManager.shared.scheduleDailyNotification()
+                        }
+                }
+            }
+            
             Section("Favorite Dishes") {
                 ForEach(preferences.favoriteDishes.sorted(), id: \.self) { dish in
                     Text(dish)
@@ -111,6 +135,11 @@ struct PreferencesView: View {
                             .foregroundColor(.accentColor)
                     }
                 }
+            }
+        }
+        .onChange(of: preferences.favoriteDishes) { _, _ in
+            if preferences.notificationsEnabled {
+                NotificationManager.shared.scheduleDailyNotification()
             }
         }
     }

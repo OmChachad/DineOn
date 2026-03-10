@@ -19,6 +19,17 @@ final class Preferences: ObservableObject {
         self.excludedKeywords = Set(UserDefaults.standard.stringArray(forKey: "excludedKeywords") ?? [])
         self.hasDietaryRestrictions = UserDefaults.standard.bool(forKey: "hasDietaryRestrictions")
         self.favoriteDishes = Set(UserDefaults.standard.stringArray(forKey: "favoriteDishes") ?? [])
+        self.notificationsEnabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")
+        
+        // Default notification time: 7:00 AM
+        if let savedTime = UserDefaults.standard.object(forKey: "notificationTime") as? Date {
+            self.notificationTime = savedTime
+        } else {
+            var components = DateComponents()
+            components.hour = 7
+            components.minute = 0
+            self.notificationTime = Calendar.current.date(from: components) ?? Date()
+        }
     }
 
     // MARK: - Published properties
@@ -49,6 +60,18 @@ final class Preferences: ObservableObject {
     @Published var favoriteDishes: Set<String> {
         didSet {
             UserDefaults.standard.set(Array(favoriteDishes), forKey: "favoriteDishes")
+        }
+    }
+    
+    @Published var notificationsEnabled: Bool {
+        didSet {
+            UserDefaults.standard.set(notificationsEnabled, forKey: "notificationsEnabled")
+        }
+    }
+    
+    @Published var notificationTime: Date {
+        didSet {
+            UserDefaults.standard.set(notificationTime, forKey: "notificationTime")
         }
     }
 

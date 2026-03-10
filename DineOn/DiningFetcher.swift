@@ -299,6 +299,11 @@ class DiningFetcher: ObservableObject {
                     // Save to disk after successful fetch
                     self.saveCachedMenu()
                     
+                    // Reschedule daily notification with updated menu data
+                    if Preferences.shared.notificationsEnabled {
+                        NotificationManager.shared.scheduleDailyNotification()
+                    }
+
                     if let firstDate = self.diningMenu?.availableDates.first {
                         print("✅ Menu fetched and cached. Available dates:", self.diningMenu?.availableDates ?? [])
                         let venues = self.diningMenu?.venues(for: firstDate) ?? []
@@ -489,6 +494,12 @@ class DiningFetcher: ObservableObject {
                 
                 // Persist immediately
                 saveCachedMenu()
+                
+                // Reschedule daily notification with updated menu data
+                if Preferences.shared.notificationsEnabled {
+                    NotificationManager.shared.scheduleDailyNotification()
+                }
+                
                 print("✅ Refresh for \(dateString) complete. Cache updated.")
                 
             } catch {

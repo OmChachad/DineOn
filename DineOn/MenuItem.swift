@@ -111,6 +111,56 @@ struct DiningMenu: Codable {
         guard let stations = data[date]?[venue]?[meal] else { return [] }
         return stations.values.flatMap { $0 }
     }
+    
+    /// A single match of a favorited dish found on the menu.
+    struct FavoriteMatch: Hashable {
+        let dishName: String
+        let meal: String
+        let venue: String
+    }
+    
+    /// Finds all favorite dishes that appear on the menu for a given date.
+    func favoriteMatches(for date: String, favorites: Set<String>) -> [FavoriteMatch] {
+        guard !favorites.isEmpty, let venuesDict = data[date] else { return [] }
+        
+        let lowercasedFavorites = favorites.map { $0.lowercased() }
+        var matches: [FavoriteMatch] = []
+        
+        for (venue, mealsDict) in venuesDict {
+            for (meal, stationsDict) in mealsDict {
+                for (_, nodes) in stationsDict {
+                    let itemNames = Self.collectItemNames(from: nodes)
+                    for itemName in itemNames {
+                        let lowerItem = itemName.lowercased()
+                        for fav in lowercasedFavorites {
+                            if lowerItem.contains(fav) {
+                                matches.append(FavoriteMatch(dishName: itemName, meal: meal, venue: venue))
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Remove duplicates
+        return Array(Set(matches))
+    }
+    
+    /// Recursively collects all item names from a list of menu nodes.
+    private static func collectItemNames(from nodes: [MenuNode]) -> [String] {
+        var names: [String] = []
+        for node in nodes {
+            switch node.type {
+            case .item:
+                names.append(node.name)
+            case .header, .timeHeader:
+                if let children = node.items {
+                    names.append(contentsOf: collectItemNames(from: children))
+                }
+            }
+        }
+        return names
+    }
 }
 
 // MARK: - Parser
