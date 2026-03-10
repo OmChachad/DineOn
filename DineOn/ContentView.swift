@@ -17,12 +17,44 @@ struct ContentView: View {
         return formatter.string(from: Date())
     }()
     
+    @State private var chosenMeal: String? = nil
+    
     var todaysDate: String {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.string(from: Date())
     }
+    
+    /// Returns the most appropriate current meal based on time of day (uses same thresholds as MealView).
+    var currentMealForTimeOfDay: String {
+        let hour = Calendar.current.component(.hour, from: Date())
+        switch hour {
+        case 0...10:
+            return "Breakfast"
+        case 11...16:
+            return "Lunch"
+        default:
+            return "Dinner"
+        }
+    }
+    
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
+    
+    /// Returns the effective chosen meal, falling back to the best match for the current time.
+    func effectiveMeal(for availableMeals: [String]) -> String {
+        if let chosen = chosenMeal, availableMeals.contains(chosen) {
+            return chosen
+        }
+        let preferred = currentMealForTimeOfDay
+        if availableMeals.contains(preferred) {
+            return preferred
+        }
+        // Brunch can substitute for Breakfast/Lunch
+        if (preferred == "Breakfast" || preferred == "Lunch"), availableMeals.contains("Brunch") {
+            return "Brunch"
+        }
+        return availableMeals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }.first ?? preferred
+    }
     
     var body: some View {
         Group {
@@ -34,21 +66,28 @@ struct ContentView: View {
                     TabView {
                         ForEach(menu.venues(for: chosenDate).sorted(), id: \.self) { venueName in
                             Tab(betterVenueName(for: venueName), systemImage: betterVenueIcon(for: venueName)) {
+                                let availableMeals = menu.meals(for: chosenDate, venue: venueName).sorted {
+                                    (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99)
+                                }
+                                let activeMeal = effectiveMeal(for: availableMeals)
                                 
                                 ScrollView {
                                     LazyVStack(pinnedViews: [.sectionHeaders]) {
-                                        ForEach(menu.meals(for: chosenDate, venue: venueName).sorted { meal1, meal2 in
-                                            return mealOrder[meal1] ?? 99 < mealOrder[meal2] ?? 99
-                                        }, id: \.self) { meal in
-                                            MealView(meal: meal, venueName: venueName, chosenDate: chosenDate)
-                                        }
-                                        .padding()
+                                        MealContentView(meal: activeMeal, venueName: venueName, chosenDate: chosenDate)
+                                            .padding()
                                     }
-                                    .safeAreaPadding(.top, 40)
                                     .contentMargins(.top, 30, for: .scrollIndicators)
                                 }
                                 .refreshable {
                                     await diningFetcher.refreshMenu(for: chosenDate)
+                                }
+                                .safeAreaBar(edge: .top) {
+                                    dateSelector(menu: menu)
+                                        .padding(.horizontal, 20)
+                                }
+                                .safeAreaBar(edge: .bottom) {
+                                    mealSelector(availableMeals: availableMeals, activeMeal: activeMeal)
+                                        .padding(20)
                                 }
                             }
                         }
@@ -66,38 +105,6 @@ struct ContentView: View {
                             }
                         }
                     }
-                    .safeAreaInset(edge: .top) {
-                        HStack {
-                            ScrollView(.horizontal, showsIndicators: false) {
-                                HStack {
-                                    ForEach(menu.availableDates.sorted().filter( { $0 >= todaysDate } ), id: \.self) { dateString in
-                                        Button(action: {
-                                            chosenDate = dateString
-                                        }) {
-                                            Group {
-                                                if dateString == todaysDate {
-                                                    Text("Today")
-                                                } else {
-                                                    Text(stringToDate(for: dateString)!.formatted(.dateTime.month().day()))
-                                                }
-                                            }
-                                                .padding(8)
-                                                .foregroundColor(chosenDate == dateString ? .white : .primary)
-                                                .bold(chosenDate == dateString)
-                                                .glassEffect(.regular.tint(chosenDate == dateString ?  .accentColor : nil), in: .capsule)
-                                        }
-                                        .buttonStyle(.plain)
-                                        .scrollTargetLayout()
-                                    }
-                                }
-                            }
-                            
-                            .scrollTargetBehavior(.viewAligned)
-                            .scrollClipDisabled()
-                            .ignoresSafeArea(.all, edges: .horizontal)
-                        }
-                        .padding(.horizontal)
-                    }
                     .navigationTitle("DineOn")
                     .navigationBarTitleDisplayMode(.inline)
                 }
@@ -110,6 +117,64 @@ struct ContentView: View {
         .task {
             DiningFetcher.shared.fetchDiningMenu()
         }
+        .onChange(of: chosenDate) { _, _ in
+            chosenMeal = nil
+        }
+    }
+    
+    // MARK: - Selector Views
+    
+    @ViewBuilder
+    func dateSelector(menu: DiningMenu) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack {
+                ForEach(menu.availableDates.sorted().filter( { $0 >= todaysDate } ), id: \.self) { dateString in
+                    Button(action: {
+                        chosenDate = dateString
+                    }) {
+                        Group {
+                            if dateString == todaysDate {
+                                Text("Today")
+                            } else {
+                                Text(stringToDate(for: dateString)!.formatted(.dateTime.month().day()))
+                            }
+                        }
+                            .padding(8)
+                            .foregroundColor(chosenDate == dateString ? .white : .primary)
+                            .bold(chosenDate == dateString)
+                            .glassEffect(.regular.tint(chosenDate == dateString ?  .accentColor : nil), in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .scrollTargetLayout()
+                }
+            }
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollClipDisabled()
+        .ignoresSafeArea(.all, edges: .horizontal)
+    }
+    
+    @ViewBuilder
+    func mealSelector(availableMeals: [String], activeMeal: String) -> some View {
+            HStack {
+                ForEach(availableMeals, id: \.self) { meal in
+                    Button(action: {
+                        chosenMeal = meal
+                    }) {
+                        Text(meal)
+                            .padding(8)
+                            .foregroundColor(activeMeal == meal ? .white : .primary)
+                            .bold(activeMeal == meal)
+                            .frame(maxWidth: .infinity)
+                            .glassEffect(.regular.tint(activeMeal == meal ? .accentColor : nil).interactive(), in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                    .scrollTargetLayout()
+                }
+        }
+        .scrollTargetBehavior(.viewAligned)
+        .scrollClipDisabled()
+        .ignoresSafeArea(.all, edges: .horizontal)
     }
     
     func betterVenueName(for venue: String) -> String {
@@ -142,6 +207,30 @@ struct ContentView: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string)
+    }
+}
+
+/// Shows the stations and items for a single meal at a venue (replaces the old MealView loop).
+struct MealContentView: View {
+    var meal: MealName
+    var venueName: VenueName
+    var chosenDate: String
+    
+    var body: some View {
+        ForEach(DiningFetcher.shared.diningMenu?.stations(for: chosenDate, venue: venueName, meal: meal) ?? [], id: \.self) { station in
+            IndentedDisclosureGroup(expandedByDefault: true) {
+                DiningFetcher.shared.diningMenu?.nodes(for: chosenDate, venue: venueName, meal: meal, station: station).map { nodes in
+                    ForEach(nodes, id: \.self) { node in
+                        MenuNodeView(node: node)
+                    }
+                }
+            } label: {
+                Text(station)
+                    .font(.title2)
+                    .bold()
+                    .foregroundColor(.primary)
+            }
+        }
     }
 }
 
