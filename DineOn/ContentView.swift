@@ -246,7 +246,9 @@ struct ContentView: View {
 
     @ViewBuilder
     private func mealSelector(availableMeals: [String], activeMeal: String) -> some View {
-        HStack {
+        let isCompactWidth = horizontalSizeClass == .compact
+
+        HStack(spacing: isCompactWidth ? 8 : 10) {
             ForEach(availableMeals, id: \.self) { meal in
                 Button {
                     chosenMeal = meal
@@ -255,12 +257,13 @@ struct ContentView: View {
                         .padding(8)
                         .foregroundColor(activeMeal == meal ? .white : .primary)
                         .bold(activeMeal == meal)
-                        .frame(maxWidth: .infinity)
+                        .frame(maxWidth: isCompactWidth ? .infinity : nil)
                         .glassEffect(.regular.tint(activeMeal == meal ? .accentColor : nil).interactive(), in: .capsule)
                 }
                 .buttonStyle(.plain)
             }
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .scrollTargetBehavior(.viewAligned)
         .scrollClipDisabled()
         .ignoresSafeArea(.all, edges: .horizontal)
