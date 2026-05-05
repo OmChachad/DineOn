@@ -22,11 +22,11 @@ struct ContentView: View {
 
     private var todaysDate: String { DiningFetcher.formatDate(Date()) }
 
-    /// 30-day window starting today.
+    /// 7-day window starting today.
     private var selectableDates: [String] {
         let calendar = Calendar.current
         let start = calendar.startOfDay(for: Date())
-        return (0..<30).compactMap { offset in
+        return (0..<7).compactMap { offset in
             calendar.date(byAdding: .day, value: offset, to: start)
                 .map { DiningFetcher.formatDate($0) }
         }
