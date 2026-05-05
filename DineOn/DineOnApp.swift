@@ -9,15 +9,35 @@ import SwiftUI
 
 @main
 struct DineOnApp: App {
+    @Environment(\.scenePhase) private var scenePhase
+
+    init() {
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+        BackgroundRefreshManager.shared.register()
+#endif
+    }
+
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .onAppear {
-                    // Schedule notification on launch if enabled (uses cached menu)
                     if Preferences.shared.notificationsEnabled {
+                        DiningFetcher.shared.prefetchNotificationDates()
                         Task { await NotificationManager.shared.scheduleDailyNotification() }
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+                        BackgroundRefreshManager.shared.scheduleIfNeeded()
+#endif
                     }
                 }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            guard newPhase == .active, Preferences.shared.notificationsEnabled else { return }
+
+            DiningFetcher.shared.prefetchNotificationDates()
+            Task { await NotificationManager.shared.scheduleDailyNotification() }
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+            BackgroundRefreshManager.shared.scheduleIfNeeded()
+#endif
         }
     }
 }

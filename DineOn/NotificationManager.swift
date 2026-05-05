@@ -14,6 +14,31 @@ final class NotificationManager {
     private let notificationIdentifier = "daily-favorites-notification"
     
     private init() {}
+
+    static func targetDates(for notificationTime: Date, startingFrom now: Date = Date(), count: Int = 1) -> [Date] {
+        guard count > 0 else { return [] }
+
+        let calendar = Calendar.current
+        let timeComponents = calendar.dateComponents([.hour, .minute], from: notificationTime)
+        let todayAtNotificationTime = calendar.date(
+            bySettingHour: timeComponents.hour ?? 0,
+            minute: timeComponents.minute ?? 0,
+            second: 0,
+            of: now
+        ) ?? now
+
+        let firstDate = todayAtNotificationTime > now
+            ? now
+            : calendar.date(byAdding: .day, value: 1, to: now) ?? now
+
+        return (0..<count).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: firstDate)
+        }
+    }
+
+    static func targetDateStrings(for notificationTime: Date, startingFrom now: Date = Date(), count: Int = 1) -> [String] {
+        targetDates(for: notificationTime, startingFrom: now, count: count).map(DiningFetcher.formatDate)
+    }
     
     // MARK: - Permission
     
@@ -52,17 +77,10 @@ final class NotificationManager {
         // Determine which date the notification will actually fire on.
         // If the chosen time has already passed today, the calendar trigger
         // will fire tomorrow, so we need tomorrow's menu — not today's.
-        let now = Date()
         let calendar = Calendar.current
         let timeComponents = calendar.dateComponents([.hour, .minute], from: preferences.notificationTime)
-        let todayAtNotificationTime = calendar.date(bySettingHour: timeComponents.hour ?? 0,
-                                                     minute: timeComponents.minute ?? 0,
-                                                     second: 0, of: now)!
-        let targetDate = todayAtNotificationTime > now ? now : calendar.date(byAdding: .day, value: 1, to: now)!
-        
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        let targetDateString = formatter.string(from: targetDate)
+        let targetDateString = Self.targetDateStrings(for: preferences.notificationTime).first
+            ?? DiningFetcher.formatDate(Date())
         
         // Ensure the target date's menu data is available (fetches from API if needed)
         await DiningFetcher.shared.ensureDataAvailable(for: targetDateString)
@@ -91,7 +109,7 @@ final class NotificationManager {
         let matches = allMatches.filter { !expiredMeals.contains($0.meal) }
         
         guard !matches.isEmpty else {
-            print("🔕 No favorite dishes on today's menu, not scheduling notification.")
+            print("🔕 No favorite dishes on \(targetDateString), not scheduling notification.")
             return
         }
         

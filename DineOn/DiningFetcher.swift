@@ -116,6 +116,21 @@ class DiningFetcher: ObservableObject {
         }
     }
 
+    /// Proactively loads the next notification dates so alerts don't depend on
+    /// the user manually opening future days in the UI first.
+    func prefetchNotificationDates(count: Int = 2) {
+        guard Preferences.shared.notificationsEnabled else { return }
+
+        let targetDates = NotificationManager.targetDateStrings(
+            for: Preferences.shared.notificationTime,
+            count: count
+        )
+
+        for dateString in targetDates {
+            fetchMenu(for: dateString)
+        }
+    }
+
     // MARK: - API Fetch
 
     private func fetchFromAPI(for dateString: String) async {

@@ -63,18 +63,29 @@ struct PreferencesView: View {
                                 if !granted {
                                     preferences.notificationsEnabled = false
                                 } else {
+                                    DiningFetcher.shared.prefetchNotificationDates()
                                     Task { await NotificationManager.shared.scheduleDailyNotification() }
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+                                    BackgroundRefreshManager.shared.scheduleIfNeeded()
+#endif
                                 }
                             }
                         } else {
                             NotificationManager.shared.cancelNotification()
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+                            BackgroundRefreshManager.shared.scheduleIfNeeded()
+#endif
                         }
                     }
                 
                 if preferences.notificationsEnabled {
                     DatePicker("Notification Time", selection: $preferences.notificationTime, displayedComponents: .hourAndMinute)
                         .onChange(of: preferences.notificationTime) { _, _ in
+                            DiningFetcher.shared.prefetchNotificationDates()
                             Task { await NotificationManager.shared.scheduleDailyNotification() }
+#if canImport(BackgroundTasks) && canImport(UIKit) && !os(macOS)
+                            BackgroundRefreshManager.shared.scheduleIfNeeded()
+#endif
                         }
                 }
             }
@@ -133,6 +144,7 @@ struct PreferencesView: View {
         }
         .onChange(of: preferences.favoriteDishes) { _, _ in
             if preferences.notificationsEnabled {
+                DiningFetcher.shared.prefetchNotificationDates()
                 Task { await NotificationManager.shared.scheduleDailyNotification() }
             }
         }
