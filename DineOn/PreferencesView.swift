@@ -61,7 +61,7 @@ struct PreferencesView: View {
                                 if !granted {
                                     preferences.notificationsEnabled = false
                                 } else {
-                                    NotificationManager.shared.scheduleDailyNotification()
+                                    Task { await NotificationManager.shared.scheduleDailyNotification() }
                                 }
                             }
                         } else {
@@ -72,7 +72,7 @@ struct PreferencesView: View {
                 if preferences.notificationsEnabled {
                     DatePicker("Notification Time", selection: $preferences.notificationTime, displayedComponents: .hourAndMinute)
                         .onChange(of: preferences.notificationTime) { _, _ in
-                            NotificationManager.shared.scheduleDailyNotification()
+                            Task { await NotificationManager.shared.scheduleDailyNotification() }
                         }
                 }
             }
@@ -131,7 +131,7 @@ struct PreferencesView: View {
         }
         .onChange(of: preferences.favoriteDishes) { _, _ in
             if preferences.notificationsEnabled {
-                NotificationManager.shared.scheduleDailyNotification()
+                Task { await NotificationManager.shared.scheduleDailyNotification() }
             }
         }
     }

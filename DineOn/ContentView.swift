@@ -8,150 +8,190 @@
 import SwiftUI
 
 struct ContentView: View {
-    @ObservedObject var diningFetcher = DiningFetcher.shared
+    @ObservedObject var fetcher = DiningFetcher.shared
     @ObservedObject var preferences = Preferences.shared
     @ObservedObject var locationManager = LocationManager.shared
 
-    @State private var chosenDate: String = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
-    }()
-
+    @State private var chosenDate: String = DiningFetcher.formatDate(Date())
     @State private var chosenMeal: String? = nil
+    @State private var chosenTab: String = ""
 
-    var todaysDate: String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: Date())
+    @Environment(\.horizontalSizeClass) var horizontalSizeClass
+
+    // MARK: - Date helpers
+
+    private var todaysDate: String { DiningFetcher.formatDate(Date()) }
+
+    /// 30-day window starting today.
+    private var selectableDates: [String] {
+        let calendar = Calendar.current
+        let start = calendar.startOfDay(for: Date())
+        return (0..<30).compactMap { offset in
+            calendar.date(byAdding: .day, value: offset, to: start)
+                .map { DiningFetcher.formatDate($0) }
+        }
     }
 
-    /// Returns the most appropriate current meal based on time of day.
-    var currentMealForTimeOfDay: String {
-        let hour = Calendar.current.component(.hour, from: Date())
-        switch hour {
+    private var fetchState: DateFetchState {
+        fetcher.fetchStates[chosenDate] ?? .idle
+    }
+
+    // MARK: - Venue helpers
+
+    /// All three venue tabs, sorted by proximity when near campus.
+    private var sortedVenues: [DiningVenue] {
+        let names = DiningVenue.allCases.map(\.rawValue)
+        if let sorted = locationManager.sortedVenuesByProximity(names) {
+            return sorted.compactMap { DiningVenue(rawValue: $0) }
+        }
+        return DiningVenue.allCases
+    }
+
+    private func availableMeals(for venueName: String) -> [String] {
+        (fetcher.menuData[chosenDate]?[venueName]?.keys
+            .sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }) ?? []
+    }
+
+    // MARK: - Meal auto-selection
+
+    private var currentMealForTimeOfDay: String {
+        switch Calendar.current.component(.hour, from: Date()) {
         case 0...10: return "Breakfast"
         case 11...16: return "Lunch"
         default: return "Dinner"
         }
     }
 
-    @Environment(\.horizontalSizeClass) var horizontalSizeClass
-
-    func effectiveMeal(for availableMeals: [String]) -> String {
-        if let chosen = chosenMeal, availableMeals.contains(chosen) { return chosen }
+    private func effectiveMeal(for meals: [String]) -> String {
+        if let chosen = chosenMeal, meals.contains(chosen) { return chosen }
         let preferred = currentMealForTimeOfDay
-        if availableMeals.contains(preferred) { return preferred }
-        if (preferred == "Breakfast" || preferred == "Lunch"), availableMeals.contains("Brunch") { return "Brunch" }
-        return availableMeals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }.first ?? preferred
+        if meals.contains(preferred) { return preferred }
+        if (preferred == "Breakfast" || preferred == "Lunch"), meals.contains("Brunch") { return "Brunch" }
+        return meals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }.first ?? preferred
     }
-    
-    @State private var chosenTab: String = ""
+
+    // MARK: - Body
 
     var body: some View {
-        Group {
-            if diningFetcher.isLoading {
-                ProgressView("Fetching Dining Menu...")
-            } else if let menu = diningFetcher.diningMenu {
-                NavigationStack {
-                    TabView(selection: $chosenTab) {
-                        ForEach(sortedVenues(from: menu), id: \.self) { venueName in
-                            let venue = DiningVenue(rawValue: venueName)
-                            
-                            Tab(venue?.shortName ?? venueName, systemImage: venue?.iconName ?? "fork.knife", value: venueName) {
-                                let availableMeals = menu.meals(for: chosenDate, venue: venueName).sorted {
-                                    (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99)
-                                }
-                                let activeMeal = effectiveMeal(for: availableMeals)
-
-                                Group {
-                                    if availableMeals.isEmpty {
-                                        ContentUnavailableView(
-                                            "No Menu Available",
-                                            systemImage: "fork.knife.circle",
-                                            description: Text("No meals are being served at \(venue?.shortName ?? venueName) on this day.")
-                                        )
-                                    } else {
-                                        ScrollView {
-                                            LazyVStack(pinnedViews: [.sectionHeaders]) {
-                                                MealContentView(meal: activeMeal, venueName: venueName, chosenDate: chosenDate)
-                                                    .padding()
-                                            }
-//                                            .padding(.top, 50)
-                                        }
-                                        .contentMargins(.top, 50, for: .scrollIndicators)
-                                        .contentMargins(.top, 50, for: .scrollContent)
-                                    }
-                                }
-                                .refreshable {
-                                    await diningFetcher.refreshMenu(for: chosenDate)
-                                }
-                                .safeAreaBar(edge: .bottom) {
-                                    mealSelector(availableMeals: availableMeals, activeMeal: activeMeal)
-                                        .padding(20)
-                                }
-                            }
-                        }
-                        
-
-                        Tab(value: "Settings", role: .search) {
-                            PreferencesView()
-                        } label: {
-                            Label("Settings", systemImage: "gear")
-                        }
+        NavigationStack {
+            TabView(selection: $chosenTab) {
+                ForEach(sortedVenues, id: \.rawValue) { venue in
+                    Tab(venue.shortName, systemImage: venue.iconName, value: venue.rawValue) {
+                        venueTab(for: venue)
                     }
-                    .safeAreaBar(edge: .top) {
-                        Group {
-                            if chosenTab != "Settings" {
-                                VStack(spacing: 6) {
-                                    dateSelector(menu: menu)
-                                    activeFiltersBar()
-                                }
-                                .transition(.blurReplace)
-                            }
-                        }
-                        .padding(.horizontal, 20)
-                    }
-                    .toolbar {
-                        ToolbarItem(placement: .topBarTrailing) {
-                            ShareLink(item: menu.exportForLLM(date: chosenDate)) {
-                                Label("Export to LLM", systemImage: "square.and.arrow.up")
-                            }
-                        }
-                    }
-                    .navigationTitle("DineOn")
-                    .navigationBarTitleDisplayMode(.inline)
                 }
-                .environment(\.horizontalSizeClass, .compact)
-            } else {
-                Text("No dining menu available.")
+
+                Tab(value: "Settings", role: .search) {
+                    PreferencesView()
+                } label: {
+                    Label("Settings", systemImage: "gear")
+                }
             }
+            .safeAreaBar(edge: .top) {
+                Group {
+                    if chosenTab != "Settings" {
+                        VStack(spacing: 6) {
+                            dateSelector()
+                            activeFiltersBar()
+                        }
+                        .transition(.blurReplace)
+                    }
+                }
+                .padding(.horizontal, 20)
+            }
+            .toolbar {
+                if let menu = fetcher.diningMenu {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        ShareLink(item: menu.exportForLLM(date: chosenDate)) {
+                            Label("Export to LLM", systemImage: "square.and.arrow.up")
+                        }
+                    }
+                }
+            }
+            .navigationTitle("DineOn")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+        .environment(\.horizontalSizeClass, .compact)
+        .task(id: chosenDate) {
+            chosenMeal = nil
+            fetcher.fetchMenu(for: chosenDate)
         }
         .task {
-            DiningFetcher.shared.fetchDiningMenu()
             locationManager.requestLocationPermission()
-        }
-        .onChange(of: chosenDate) { _, _ in
-            chosenMeal = nil
         }
         .animation(.default, value: chosenTab)
     }
 
-    // MARK: - Selector Views
+    // MARK: - Venue Tab
 
     @ViewBuilder
-    func dateSelector(menu: DiningMenu) -> some View {
+    private func venueTab(for venue: DiningVenue) -> some View {
+        let meals = availableMeals(for: venue.rawValue)
+        let activeMeal = effectiveMeal(for: meals)
+
+        Group {
+            switch fetchState {
+            case .loading where fetcher.menuData[chosenDate] == nil:
+                ProgressView("Loading menu…")
+            case .noMenu:
+                ContentUnavailableView(
+                    "No Menu Available",
+                    systemImage: "fork.knife.circle",
+                    description: Text("No menus were found for this date.")
+                )
+            case .error(let message):
+                ContentUnavailableView(
+                    "Couldn't Load Menu",
+                    systemImage: "wifi.slash",
+                    description: Text(message)
+                )
+            case .idle:
+                ProgressView("Loading menu…")
+            default:
+                if meals.isEmpty {
+                    ContentUnavailableView(
+                        "No Menu Available",
+                        systemImage: "fork.knife.circle",
+                        description: Text("No meals are being served at \(venue.shortName) on this day.")
+                    )
+                } else {
+                    ScrollView {
+                        LazyVStack(pinnedViews: [.sectionHeaders]) {
+                            MealContentView(meal: activeMeal, venueName: venue.rawValue, chosenDate: chosenDate)
+                                .padding()
+                        }
+                    }
+                    .contentMargins(.top, 50, for: .scrollIndicators)
+                    .contentMargins(.top, 50, for: .scrollContent)
+                }
+            }
+        }
+//        .refreshable {
+//            await fetcher.refresh(for: chosenDate)
+//        }
+        .safeAreaBar(edge: .bottom) {
+            if !meals.isEmpty {
+                mealSelector(availableMeals: meals, activeMeal: activeMeal)
+                    .padding(20)
+            }
+        }
+    }
+
+    // MARK: - Date Selector
+
+    @ViewBuilder
+    private func dateSelector() -> some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack {
-                ForEach(menu.availableDates.sorted().filter({ $0 >= todaysDate }), id: \.self) { dateString in
-                    Button(action: {
+                ForEach(selectableDates, id: \.self) { dateString in
+                    Button {
                         chosenDate = dateString
-                    }) {
+                    } label: {
                         Group {
                             if dateString == todaysDate {
                                 Text("Today")
-                            } else {
-                                Text(stringToDate(for: dateString)!.formatted(.dateTime.month().day()))
+                            } else if let date = dateFromString(dateString) {
+                                Text(date.formatted(.dateTime.month().day()))
                             }
                         }
                         .padding(8)
@@ -169,8 +209,9 @@ struct ContentView: View {
         .ignoresSafeArea(.all, edges: .horizontal)
     }
 
+    // MARK: - Active Filters Bar
     @ViewBuilder
-    func activeFiltersBar() -> some View {
+    private func activeFiltersBar() -> some View {
         let activeAllergens = Allergen.allCases.filter {
             $0 != .notAnalyzed && $0 != .unknown && preferences.isAllergenSelected($0)
         }
@@ -178,9 +219,7 @@ struct ContentView: View {
             $0 != .unknown && preferences.hasDietaryRestrictions && preferences.isDietaryPreferenceSelected($0)
         }
 
-        let hasActiveFilters = !activeAllergens.isEmpty || !activeDietaryPrefs.isEmpty
-
-        if hasActiveFilters {
+        if !activeAllergens.isEmpty || !activeDietaryPrefs.isEmpty {
             HStack(spacing: 10) {
                 ForEach(activeAllergens, id: \.self) { allergen in
                     HStack(spacing: 4) {
@@ -203,13 +242,15 @@ struct ContentView: View {
         }
     }
 
+    // MARK: - Meal Selector
+
     @ViewBuilder
-    func mealSelector(availableMeals: [String], activeMeal: String) -> some View {
+    private func mealSelector(availableMeals: [String], activeMeal: String) -> some View {
         HStack {
             ForEach(availableMeals, id: \.self) { meal in
-                Button(action: {
+                Button {
                     chosenMeal = meal
-                }) {
+                } label: {
                     Text(meal)
                         .padding(8)
                         .foregroundColor(activeMeal == meal ? .white : .primary)
@@ -225,16 +266,12 @@ struct ContentView: View {
         .ignoresSafeArea(.all, edges: .horizontal)
     }
 
-    func stringToDate(for string: String) -> Date? {
+    // MARK: - Helpers
+
+    private func dateFromString(_ string: String) -> Date? {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         return formatter.date(from: string)
-    }
-
-    func sortedVenues(from menu: DiningMenu) -> [String] {
-        let venues = menu.venues(for: chosenDate)
-        if let proximitySorted = locationManager.sortedVenuesByProximity(venues) { return proximitySorted }
-        return venues.sorted()
     }
 }
 
@@ -246,9 +283,9 @@ struct MealContentView: View {
     var chosenDate: String
 
     var body: some View {
-        ForEach(DiningFetcher.shared.diningMenu?.stations(for: chosenDate, venue: venueName, meal: meal) ?? [], id: \.self) { station in
+        ForEach(DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? [], id: \.self) { station in
             IndentedDisclosureGroup(expandedByDefault: true) {
-                DiningFetcher.shared.diningMenu?.nodes(for: chosenDate, venue: venueName, meal: meal, station: station).map { nodes in
+                if let nodes = DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?[station] {
                     ForEach(nodes, id: \.self) { node in
                         MenuNodeView(node: node)
                     }

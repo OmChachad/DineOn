@@ -7,6 +7,17 @@
 
 import Foundation
 import Combine
+import Network
+
+// MARK: - Per-Date Fetch State
+
+enum DateFetchState: Equatable {
+    case idle
+    case loading
+    case loaded
+    case noMenu
+    case error(String)
+}
 
 // MARK: - DiningFetcher
 
@@ -14,99 +25,126 @@ import Combine
 class DiningFetcher: ObservableObject {
     static let shared = DiningFetcher()
 
-    @Published var diningMenu: DiningMenu? = nil
-    @Published var isLoading: Bool = false
+    /// Live in-memory menu data, keyed by date string ("yyyy-MM-dd").
+    @Published var menuData: DiningData = [:]
 
-    private let cacheFileName = "diningMenuCache.json"
+    /// Per-date loading / error state so the UI can react individually.
+    @Published var fetchStates: [String: DateFetchState] = [:]
+
     private let baseURL = "https://hospitality.usc.edu/wp-json/hsp-api/v1/get-res-dining-menus"
 
-    private var cacheFileURL: URL {
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        return documentsDirectory.appendingPathComponent(cacheFileName)
+    // Network monitor
+    private let monitor = NWPathMonitor()
+    private var isOnline: Bool = true
+
+    // MARK: - Computed helpers
+
+    /// Thin wrapper so the rest of the app can keep using `.diningMenu`.
+    var diningMenu: DiningMenu? {
+        menuData.isEmpty ? nil : DiningMenu(data: menuData)
     }
+
+    // MARK: - Init
 
     private init() {
-        loadCachedMenu()
+        startNetworkMonitor()
+        loadAllCachedDates()
+        evictPastCaches()
+
+        // Eagerly seed today's data
+        let today = Self.formatDate(Date())
+        fetchMenu(for: today)
     }
 
-    // MARK: - Cache
+    // MARK: - Network Monitor
 
-    private func loadCachedMenu() {
-        guard FileManager.default.fileExists(atPath: cacheFileURL.path) else {
-            print("📦 No cached menu found")
+    private func startNetworkMonitor() {
+        monitor.pathUpdateHandler = { [weak self] path in
+            Task { @MainActor in
+                self?.isOnline = (path.status == .satisfied)
+            }
+        }
+        monitor.start(queue: DispatchQueue(label: "DineOn.NetworkMonitor"))
+    }
+
+    // MARK: - Public API
+
+    /// Fetches menu data for the given date.
+    /// - Online: always hits the API, updates in-memory data + disk cache.
+    /// - Offline: serves from disk cache if available.
+    func fetchMenu(for dateString: String) {
+        guard fetchStates[dateString] != .loading else { return }
+
+        if !isOnline {
+            // Offline path — use cache or report error
+            if menuData[dateString] != nil {
+                fetchStates[dateString] = .loaded
+            } else if let cached = Self.loadCache(for: dateString) {
+                menuData[dateString] = cached
+                fetchStates[dateString] = .loaded
+            } else {
+                fetchStates[dateString] = .error("You're offline and no cached menu is available.")
+            }
             return
         }
 
-        do {
-            let data = try Data(contentsOf: cacheFileURL)
-            let cachedMenu = try JSONDecoder().decode(DiningMenu.self, from: data)
+        // Online — hit the API
+        Task { await fetchFromAPI(for: dateString) }
+    }
 
-            if isMenuValid(cachedMenu) {
-                self.diningMenu = cachedMenu
-                print("📦 Loaded valid cached menu with dates:", cachedMenu.availableDates)
-            } else {
-                print("📦 Cached menu expired, clearing cache")
-                clearCache()
+    /// Pull-to-refresh variant. Always hits the API.
+    func refresh(for dateString: String) async {
+        guard isOnline else { return }
+        await fetchFromAPI(for: dateString)
+    }
+
+    /// Ensures data for the given date is available in `menuData`.
+    /// If already loaded, returns immediately. Otherwise fetches from API (or cache if offline).
+    func ensureDataAvailable(for dateString: String) async {
+        if menuData[dateString] != nil { return }
+
+        if isOnline {
+            await fetchFromAPI(for: dateString)
+        } else if let cached = Self.loadCache(for: dateString) {
+            menuData[dateString] = cached
+            fetchStates[dateString] = .loaded
+        }
+    }
+
+    // MARK: - API Fetch
+
+    private func fetchFromAPI(for dateString: String) async {
+        fetchStates[dateString] = .loading
+
+        var venueResults: [VenueName: [MealName: [StationName: [MenuNode]]]] = [:]
+
+        await withTaskGroup(of: (DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
+            for venue in DiningVenue.allCases {
+                group.addTask { [self] in
+                    let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
+                    return (venue, result)
+                }
             }
-        } catch {
-            print("❌ Failed to load cached menu:", error)
-            clearCache()
-        }
-    }
-
-    private func saveCachedMenu() {
-        guard let menu = diningMenu else { return }
-        do {
-            let encoder = JSONEncoder()
-            encoder.outputFormatting = .prettyPrinted
-            let data = try encoder.encode(menu)
-            try data.write(to: cacheFileURL, options: .atomic)
-            print("💾 Menu cached successfully")
-        } catch {
-            print("❌ Failed to cache menu:", error)
-        }
-    }
-
-    private func clearCache() {
-        do {
-            if FileManager.default.fileExists(atPath: cacheFileURL.path) {
-                try FileManager.default.removeItem(at: cacheFileURL)
-                print("🗑️ Cache cleared")
+            for await (venue, venueMenu) in group {
+                if let venueMenu { venueResults[venue.rawValue] = venueMenu }
             }
-        } catch {
-            print("❌ Failed to clear cache:", error)
+        }
+
+        if venueResults.isEmpty {
+            fetchStates[dateString] = isOnline ? .noMenu : .error("Network error.")
+            return
+        }
+
+        menuData[dateString] = venueResults
+        fetchStates[dateString] = .loaded
+        Self.saveCache(for: dateString, data: venueResults)
+
+        if Preferences.shared.notificationsEnabled {
+            Task { await NotificationManager.shared.scheduleDailyNotification() }
         }
     }
 
-    private func isMenuValid(_ menu: DiningMenu) -> Bool {
-        let todayString = formatDateString(Calendar.current.startOfDay(for: Date()))
-        return menu.availableDates.contains(todayString)
-    }
-
-    private func formatDateString(_ date: Date) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd"
-        return formatter.string(from: date)
-    }
-
-    // MARK: - Date Helpers
-
-    private func currentWeekDates() -> [String] {
-        let calendar = Calendar.current
-        let today = Date()
-        let weekday = calendar.component(.weekday, from: today) // 1 = Sunday
-
-        guard let startOfWeek = calendar.date(byAdding: .day, value: -(weekday - 1), to: today) else {
-            return [formatDateString(today)]
-        }
-
-        return (0...7).compactMap { offset in
-            calendar.date(byAdding: .day, value: offset, to: startOfWeek)
-                .map { formatDateString($0) }
-        }
-    }
-
-    // MARK: - API Fetching
+    // MARK: - API Helpers (nonisolated for TaskGroup)
 
     nonisolated private func apiURL(venue: DiningVenue, dateString: String) -> URL? {
         let parts = dateString.split(separator: "-")
@@ -135,7 +173,7 @@ class DiningFetcher: ObservableObject {
     nonisolated private func transformToAppFormat(meals: [DiningAPIMeal]) -> [MealName: [StationName: [MenuNode]]] {
         var result: [MealName: [StationName: [MenuNode]]] = [:]
         for meal in meals {
-            guard !meal.stations.isEmpty else { continue } // skip meals not served today
+            guard !meal.stations.isEmpty else { continue }
             var stationsDict: [StationName: [MenuNode]] = [:]
             for station in meal.stations {
                 let nodes: [MenuNode]
@@ -165,97 +203,68 @@ class DiningFetcher: ObservableObject {
         )
     }
 
-    // MARK: - Public API
+    // MARK: - Per-Date Disk Cache
 
-    /// Fetches the dining menu for the current week, using cache if valid.
-    func fetchDiningMenu(forceRefresh: Bool = false) {
-        if !forceRefresh, let menu = diningMenu, isMenuValid(menu) {
-            print("📦 Using cached menu - still valid for today")
-            return
+    nonisolated private static var cacheDirectory: URL {
+        FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("DiningMenuCache", isDirectory: true)
+    }
+
+    nonisolated private static func cacheURL(for dateString: String) -> URL {
+        cacheDirectory.appendingPathComponent("menu-\(dateString).json")
+    }
+
+    nonisolated private static func loadCache(for dateString: String) -> [VenueName: [MealName: [StationName: [MenuNode]]]]? {
+        guard let data = try? Data(contentsOf: cacheURL(for: dateString)) else { return nil }
+        return try? JSONDecoder().decode([VenueName: [MealName: [StationName: [MenuNode]]]].self, from: data)
+    }
+
+    nonisolated private static func saveCache(for dateString: String, data: [VenueName: [MealName: [StationName: [MenuNode]]]]) {
+        let fm = FileManager.default
+        let dir = cacheDirectory
+        if !fm.fileExists(atPath: dir.path) {
+            try? fm.createDirectory(at: dir, withIntermediateDirectories: true)
         }
-
-        Task {
-            isLoading = true
-            defer { isLoading = false }
-
-            let weekDates = currentWeekDates()
-            var allData: DiningData = [:]
-
-            await withTaskGroup(of: (String, DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
-                for dateString in weekDates {
-                    for venue in DiningVenue.allCases {
-                        group.addTask { [self] in
-                            let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
-                            return (dateString, venue, result)
-                        }
-                    }
-                }
-
-                for await (dateString, venue, venueMenu) in group {
-                    if let venueMenu {
-                        if allData[dateString] == nil { allData[dateString] = [:] }
-                        allData[dateString]?[venue.rawValue] = venueMenu
-                    }
-                }
-            }
-
-            guard !allData.isEmpty else {
-                print("❌ No menu data fetched from API")
-                return
-            }
-
-            self.diningMenu = DiningMenu(data: allData)
-            saveCachedMenu()
-
-            if Preferences.shared.notificationsEnabled {
-                NotificationManager.shared.scheduleDailyNotification()
-            }
-
-            print("✅ Menu fetched. Available dates:", self.diningMenu?.availableDates ?? [])
+        if let encoded = try? JSONEncoder().encode(data) {
+            try? encoded.write(to: cacheURL(for: dateString), options: .atomic)
         }
     }
 
-    /// Refreshes the menu for a specific date (expects "yyyy-MM-dd").
-    func refreshMenu(for dateString: String) async {
-        isLoading = true
-        defer { isLoading = false }
-
-        print("🔄 Refreshing menus for date:", dateString)
-
-        var dateVenueData: [VenueName: [MealName: [StationName: [MenuNode]]]] = [:]
-
-        await withTaskGroup(of: (DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
-            for venue in DiningVenue.allCases {
-                group.addTask { [self] in
-                    let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
-                    return (venue, result)
-                }
-            }
-
-            for await (venue, venueMenu) in group {
-                if let venueMenu {
-                    dateVenueData[venue.rawValue] = venueMenu
-                }
+    /// Loads all cached dates into memory (offline seed on launch).
+    private func loadAllCachedDates() {
+        let fm = FileManager.default
+        guard let files = try? fm.contentsOfDirectory(at: Self.cacheDirectory, includingPropertiesForKeys: nil) else { return }
+        for file in files where file.pathExtension == "json" {
+            let name = file.deletingPathExtension().lastPathComponent
+            let dateString = String(name.dropFirst("menu-".count))
+            if let cached = Self.loadCache(for: dateString) {
+                menuData[dateString] = cached
+                fetchStates[dateString] = .loaded
             }
         }
+    }
 
-        guard !dateVenueData.isEmpty else {
-            print("❌ No menu data fetched for \(dateString)")
-            return
+    /// Removes cached files for dates before today.
+    private func evictPastCaches() {
+        let fm = FileManager.default
+        let today = Self.formatDate(Date())
+        guard let files = try? fm.contentsOfDirectory(at: Self.cacheDirectory, includingPropertiesForKeys: nil) else { return }
+        for file in files where file.pathExtension == "json" {
+            let name = file.deletingPathExtension().lastPathComponent
+            let dateString = String(name.dropFirst("menu-".count))
+            if dateString < today {
+                try? fm.removeItem(at: file)
+                menuData.removeValue(forKey: dateString)
+                fetchStates.removeValue(forKey: dateString)
+            }
         }
+    }
 
-        if diningMenu == nil {
-            diningMenu = DiningMenu(data: [dateString: dateVenueData])
-        } else {
-            diningMenu!.data[dateString] = dateVenueData
-        }
+    // MARK: - Date Formatting
 
-        saveCachedMenu()
-
-        if Preferences.shared.notificationsEnabled {
-            NotificationManager.shared.scheduleDailyNotification()
-        }
-
-        print("✅ Refresh for \(dateString) complete.")
+    nonisolated static func formatDate(_ date: Date) -> String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        return f.string(from: date)
     }
 }

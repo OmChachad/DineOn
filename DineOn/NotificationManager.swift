@@ -32,7 +32,8 @@ final class NotificationManager {
     
     /// Schedules (or reschedules) the daily favorites notification.
     /// Call this whenever the menu is fetched, favorites change, or notification settings change.
-    func scheduleDailyNotification() {
+    @MainActor
+    func scheduleDailyNotification() async {
         let preferences = Preferences.shared
         
         // Cancel any existing notification first
@@ -45,12 +46,6 @@ final class NotificationManager {
         
         guard !preferences.favoriteDishes.isEmpty else {
             print("🔕 No favorite dishes, not scheduling.")
-            return
-        }
-        
-        // Try to load cached menu from disk
-        guard let menu = loadCachedMenu() else {
-            print("⚠️ No cached menu available, cannot schedule notification.")
             return
         }
         
@@ -68,6 +63,14 @@ final class NotificationManager {
         let formatter = DateFormatter()
         formatter.dateFormat = "yyyy-MM-dd"
         let targetDateString = formatter.string(from: targetDate)
+        
+        // Ensure the target date's menu data is available (fetches from API if needed)
+        await DiningFetcher.shared.ensureDataAvailable(for: targetDateString)
+        
+        guard let menu = DiningFetcher.shared.diningMenu else {
+            print("⚠️ No menu data available, cannot schedule notification.")
+            return
+        }
         
         // Find matches for the date the notification will fire on
         let allMatches = menu.favoriteMatches(for: targetDateString, favorites: preferences.favoriteDishes)
@@ -156,23 +159,5 @@ final class NotificationManager {
     /// Cancels the pending daily notification.
     func cancelNotification() {
         UNUserNotificationCenter.current().removePendingNotificationRequests(withIdentifiers: [notificationIdentifier])
-    }
-    
-    // MARK: - Cache Loading
-    
-    /// Loads the cached DiningMenu from disk (same path used by DiningFetcher).
-    private func loadCachedMenu() -> DiningMenu? {
-        let documentsDirectory = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let cacheURL = documentsDirectory.appendingPathComponent("diningMenuCache.json")
-        
-        guard FileManager.default.fileExists(atPath: cacheURL.path) else { return nil }
-        
-        do {
-            let data = try Data(contentsOf: cacheURL)
-            return try JSONDecoder().decode(DiningMenu.self, from: data)
-        } catch {
-            print("❌ Failed to load cached menu for notifications: \(error)")
-            return nil
-        }
     }
 }

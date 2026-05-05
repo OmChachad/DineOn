@@ -15,7 +15,7 @@ struct DineOnApp: App {
                 .onAppear {
                     // Schedule notification on launch if enabled (uses cached menu)
                     if Preferences.shared.notificationsEnabled {
-                        NotificationManager.shared.scheduleDailyNotification()
+                        Task { await NotificationManager.shared.scheduleDailyNotification() }
                     }
                 }
         }

@@ -12,43 +12,31 @@ struct MealView: View {
     var venueName: VenueName
     var chosenDate: String
 
+    private var stations: [String] {
+        DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? []
+    }
+
     func expiredMeals() -> [String] {
-        guard chosenDate == {
-            let formatter = DateFormatter()
-            formatter.dateFormat = "yyyy-MM-dd"
-            return formatter.string(from: Date.now)
-        }() else { return [] }
+        guard chosenDate == DiningFetcher.formatDate(Date()) else { return [] }
 
-        let dateFormatter = DateFormatter()
-        dateFormatter.dateFormat = "HH"
-
-        let hourOfDay = Int(dateFormatter.string(from: Date.now))
-
-        guard let hourOfDay else { return [] }
-
-        switch (hourOfDay) {
-        case 1...10:
-            return []
-        case 11...16:
-            return ["Breakfast"]
-        case 17...24:
-            return ["Breakfast", "Lunch", "Brunch"]
-        default:
-            return []
+        let hour = Calendar.current.component(.hour, from: Date.now)
+        switch hour {
+        case 1...10:  return []
+        case 11...16: return ["Breakfast"]
+        case 17...24: return ["Breakfast", "Lunch", "Brunch"]
+        default:      return []
         }
     }
 
-    var isExpired: Bool {
-        expiredMeals().contains(meal)
-    }
+    var isExpired: Bool { expiredMeals().contains(meal) }
 
     @ViewBuilder
     var body: some View {
         if !isExpired {
-            IndentedDisclosureGroup(expandedByDefault: expiredMeals().contains(meal) == false) {
-                ForEach(DiningFetcher.shared.diningMenu!.stations(for: chosenDate, venue: venueName, meal: meal), id: \.self) { station in
+            IndentedDisclosureGroup(expandedByDefault: true) {
+                ForEach(stations, id: \.self) { station in
                     IndentedDisclosureGroup(expandedByDefault: true) {
-                        DiningFetcher.shared.diningMenu!.nodes(for: chosenDate, venue: venueName, meal: meal, station: station).map { nodes in
+                        if let nodes = DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?[station] {
                             ForEach(nodes, id: \.self) { node in
                                 MenuNodeView(node: node)
                             }
@@ -61,21 +49,14 @@ struct MealView: View {
                     }
                 }
             } label: {
-                Group {
-                    if isExpired {
-                        Text("~~\(meal)~~")
-                    } else {
-                        Text(meal)
-                    }
-                }
-                .font(.title)
-                .bold()
-                .foregroundColor(.primary)
-                .fontWidth(.expanded)
+                Text(meal)
+                    .font(.title)
+                    .bold()
+                    .foregroundColor(.primary)
+                    .fontWidth(.expanded)
             }
 
-            Divider()
-                .bold()
+            Divider().bold()
         }
     }
 }
