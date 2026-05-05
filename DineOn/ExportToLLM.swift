@@ -66,7 +66,11 @@ extension DiningMenu {
     private func formatNode(_ node: MenuNode, indent: String) -> String {
         switch node.type {
         case .header:
-            return "\(indent)📌 \(node.name.uppercased())"
+            var line = "\(indent)📌 \(node.name.uppercased())"
+            if let timingInfo = node.timingInfo {
+                line += "\n\(indent)   ⓘ \(timingText(for: timingInfo))"
+            }
+            return line
             
         case .timeHeader:
             return "\(indent)⏱️ \(node.name)"
@@ -94,6 +98,25 @@ extension DiningMenu {
             }
             
             return line
+        case .info:
+            if node.name.isEmpty, let timingInfo = node.timingInfo {
+                return "\(indent)ⓘ \(timingText(for: timingInfo))"
+            }
+
+            if let timingInfo = node.timingInfo {
+                return "\(indent)ⓘ \(node.name) (\(timingText(for: timingInfo)))"
+            }
+
+            return "\(indent)ⓘ \(node.name)"
+        }
+    }
+
+    private func timingText(for timingInfo: MenuTimingInfo) -> String {
+        switch timingInfo.kind {
+        case .opensAt, .availableAt, .availableFrom, .servedAt:
+            return "Opens at \(timingInfo.timeText)"
+        case .availableUntil:
+            return "Available until \(timingInfo.timeText)"
         }
     }
 }

@@ -278,27 +278,57 @@ struct ContentView: View {
 // MARK: - MealContentView
 
 struct MealContentView: View {
+    @ObservedObject private var fetcher = DiningFetcher.shared
+
     var meal: MealName
     var venueName: VenueName
     var chosenDate: String
 
     var body: some View {
-        ForEach(DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? [], id: \.self) { station in
+        ForEach(fetcher.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? [], id: \.self) { station in
+            let stationNodes = fetcher.menuData[chosenDate]?[venueName]?[meal]?[station] ?? []
+            let stationTimingNode = stationNodes.first(where: isStationTimingNode)
+            let visibleNodes = stationNodes.filter { $0 != stationTimingNode }
+
             IndentedDisclosureGroup(expandedByDefault: true) {
-                if let nodes = DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?[station] {
-                    ForEach(nodes, id: \.self) { node in
-                        MenuNodeView(node: node)
-                    }
+                ForEach(visibleNodes, id: \.self) { node in
+                    MenuNodeView(node: node, chosenDate: chosenDate)
                 }
             } label: {
-                Text(station)
-                    .font(.title2)
-                    .bold()
-                    .foregroundColor(.primary)
-                    .multilineTextAlignment(.leading)
+                StationHeaderLabel(
+                    title: station,
+                    timingText: stationTimingNode.flatMap { timingDisplayText(for: $0, chosenDate: chosenDate) }
+                )
             }
         }
     }
+}
+
+struct StationHeaderLabel: View {
+    let title: String
+    var timingText: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(title)
+                .font(.title2)
+                .bold()
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+
+            if let timingText {
+                Text(timingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+func isStationTimingNode(_ node: MenuNode) -> Bool {
+    node.type == .info && node.name.isEmpty && node.timingInfo != nil
 }
 
 #Preview {

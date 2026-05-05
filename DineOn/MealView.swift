@@ -8,12 +8,14 @@
 import SwiftUI
 
 struct MealView: View {
+    @ObservedObject private var fetcher = DiningFetcher.shared
+
     var meal: MealName
     var venueName: VenueName
     var chosenDate: String
 
     private var stations: [String] {
-        DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? []
+        fetcher.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? []
     }
 
     func expiredMeals() -> [String] {
@@ -35,17 +37,19 @@ struct MealView: View {
         if !isExpired {
             IndentedDisclosureGroup(expandedByDefault: true) {
                 ForEach(stations, id: \.self) { station in
+                    let stationNodes = fetcher.menuData[chosenDate]?[venueName]?[meal]?[station] ?? []
+                    let stationTimingNode = stationNodes.first(where: isStationTimingNode)
+                    let visibleNodes = stationNodes.filter { $0 != stationTimingNode }
+
                     IndentedDisclosureGroup(expandedByDefault: true) {
-                        if let nodes = DiningFetcher.shared.menuData[chosenDate]?[venueName]?[meal]?[station] {
-                            ForEach(nodes, id: \.self) { node in
-                                MenuNodeView(node: node)
-                            }
+                        ForEach(visibleNodes, id: \.self) { node in
+                            MenuNodeView(node: node, chosenDate: chosenDate)
                         }
                     } label: {
-                        Text(station)
-                            .font(.title2)
-                            .bold()
-                            .foregroundColor(.primary)
+                        StationHeaderLabel(
+                            title: station,
+                            timingText: stationTimingNode.flatMap { timingDisplayText(for: $0, chosenDate: chosenDate) }
+                        )
                     }
                 }
             } label: {

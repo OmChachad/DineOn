@@ -20,6 +20,20 @@ enum MenuNodeType: String, Codable {
     case item
     case header
     case timeHeader = "time-header"
+    case info
+}
+
+enum MenuTimingKind: String, Codable, Hashable {
+    case opensAt = "opens-at"
+    case availableAt = "available-at"
+    case availableUntil = "available-until"
+    case availableFrom = "available-from"
+    case servedAt = "served-at"
+}
+
+struct MenuTimingInfo: Codable, Hashable {
+    let kind: MenuTimingKind
+    let timeText: String
 }
 
 /// Optional dietary flags (from JS `data-preferences`)
@@ -55,6 +69,7 @@ struct MenuNode: Codable, Hashable {
     let allergens: [Allergen]?
     let preferences: [DietaryPreference]?
     let disclaimers: [String]?
+    let timingInfo: MenuTimingInfo?
     let items: [MenuNode]?
 }
 
@@ -153,6 +168,8 @@ struct DiningMenu: Codable {
             switch node.type {
             case .item:
                 names.append(node.name)
+            case .info:
+                break
             case .header, .timeHeader:
                 if let children = node.items {
                     names.append(contentsOf: collectItemNames(from: children))
@@ -162,5 +179,3 @@ struct DiningMenu: Codable {
         return names
     }
 }
-
-

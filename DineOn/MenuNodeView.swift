@@ -11,28 +11,29 @@ struct MenuNodeView: View {
     @StateObject private var preferences = Preferences.shared
     
     let node: MenuNode
+    let chosenDate: String
     
     var body: some View {
         Group {
             switch node.type {
             case .item:
                 if itemFitsPreferences(node) {
-                    MenuItemView(node: node)
+                    MenuItemView(node: node, chosenDate: chosenDate)
                 }
+            case .info:
+                MenuInfoView(node: node, chosenDate: chosenDate)
             case .header, .timeHeader:
-                IndentedDisclosureGroup(expandedByDefault: true) {
-                    if let items = node.items {
+                if let items = node.items, !items.isEmpty {
+                    IndentedDisclosureGroup(expandedByDefault: true) {
                         ForEach(items, id: \.name) { item in
-                            MenuNodeView(node: item)
+                            MenuNodeView(node: item, chosenDate: chosenDate)
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
+                    } label: {
+                        MenuHeaderLabel(node: node, chosenDate: chosenDate)
                     }
-                } label: {
-                    Text(node.name)
-                        .font(node.type == .timeHeader ? .headline : .title3)
-                        .bold()
-                        .foregroundColor(.primary)
-                        .multilineTextAlignment(.leading)
+                } else {
+                    MenuHeaderLabel(node: node, chosenDate: chosenDate)
                 }
             }
         }
@@ -79,10 +80,34 @@ struct MenuNodeView: View {
     }
 }
 
+struct MenuHeaderLabel: View {
+    let node: MenuNode
+    let chosenDate: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(node.name)
+                .font(node.type == .timeHeader ? .headline : .title3)
+                .bold()
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+
+            if let timingText = timingDisplayText(for: node, chosenDate: chosenDate) {
+                Text(timingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
 struct MenuItemView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var preferences = Preferences.shared
     let node: MenuNode
+    let chosenDate: String
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -115,6 +140,12 @@ struct MenuItemView: View {
                         .foregroundColor(.yellow)
                 }
             }
+
+//            if let timingText = timingDisplayText(for: node, chosenDate: chosenDate) {
+//                Text(timingText)
+//                    .font(.subheadline)
+//                    .foregroundStyle(.secondary)
+//            }
         }
         .padding(.vertical, 2)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -140,7 +171,7 @@ struct MenuItemView: View {
                     Image(systemName: "hand.thumbsdown.fill")
                 }
         } preview: {
-            MenuItemView(node: node)
+            MenuItemView(node: node, chosenDate: chosenDate)
                 .lineLimit(3)
                 .padding(10)
                 .padding(.trailing, 100)
@@ -168,4 +199,83 @@ struct MenuItemView: View {
             }
         }
     }
+}
+
+struct MenuInfoView: View {
+    let node: MenuNode
+    let chosenDate: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            if !node.name.isEmpty {
+                Text(node.name)
+                    .font(.body.weight(.medium))
+                    .foregroundStyle(.primary)
+                    .multilineTextAlignment(.leading)
+            }
+
+            if let timingText = timingDisplayText(for: node, chosenDate: chosenDate) {
+                Text(timingText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.leading)
+            }
+        }
+        .padding(.vertical, 2)
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+func timingDisplayText(for node: MenuNode, chosenDate: String) -> String? {
+    guard let timingInfo = node.timingInfo else { return nil }
+    return timingDisplayText(for: timingInfo, chosenDate: chosenDate)
+}
+
+func timingDisplayText(for timingInfo: MenuTimingInfo, chosenDate: String) -> String {
+    let fallback = absoluteTimingText(for: timingInfo)
+    guard chosenDate == DiningFetcher.formatDate(Date()),
+          let targetDate = dateForChosenDay(timeText: timingInfo.timeText, chosenDate: chosenDate) else {
+        return fallback
+    }
+
+    let now = Date()
+    switch timingInfo.kind {
+    case .opensAt, .availableAt, .availableFrom, .servedAt:
+        return targetDate > now ? "Opens \(relativeText(to: targetDate, from: now))" : "Open now"
+    case .availableUntil:
+        return targetDate > now ? "Available for \(relativeText(since: now, now: targetDate))" : "Closed \(relativeText(since: targetDate, now: now))"
+    }
+}
+
+func absoluteTimingText(for timingInfo: MenuTimingInfo) -> String {
+    switch timingInfo.kind {
+    case .opensAt, .availableAt, .availableFrom, .servedAt:
+        return "Opens at \(timingInfo.timeText)"
+    case .availableUntil:
+        return "Available until \(timingInfo.timeText)"
+    }
+}
+
+func dateForChosenDay(timeText: String, chosenDate: String) -> Date? {
+    let dateFormatter = DateFormatter()
+    dateFormatter.locale = Locale(identifier: "en_US_POSIX")
+    dateFormatter.dateFormat = "yyyy-MM-dd h:mma"
+
+    let normalizedTime = timeText
+        .replacingOccurrences(of: " ", with: "")
+        .uppercased()
+
+    return dateFormatter.date(from: "\(chosenDate) \(normalizedTime)")
+}
+
+func relativeText(to futureDate: Date, from now: Date) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .full
+    return formatter.localizedString(for: futureDate, relativeTo: now)
+}
+
+func relativeText(since earlierDate: Date, now: Date) -> String {
+    let formatter = RelativeDateTimeFormatter()
+    formatter.unitsStyle = .full
+    return formatter.localizedString(for: earlierDate, relativeTo: now)
 }

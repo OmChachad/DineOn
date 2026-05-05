@@ -34,5 +34,6 @@ struct IndentedDisclosureGroup<Label: View, Content: View>: View {
         } label: {
             label()
         }
+        .tint(.primary)
     }
 }

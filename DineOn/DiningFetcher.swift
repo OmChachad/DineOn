@@ -205,18 +205,165 @@ class DiningFetcher: ObservableObject {
             guard !meal.stations.isEmpty else { continue }
             var stationsDict: [StationName: [MenuNode]] = [:]
             for station in meal.stations {
+                let groupedMenu = groupedMenuNodes(from: station.menu)
                 let nodes: [MenuNode]
                 if let subtitle = station.subtitle, !subtitle.isEmpty {
-                    let children = station.menu.map { menuNodeFrom($0) }
-                    nodes = [MenuNode(name: subtitle, type: .header, allergens: nil, preferences: nil, disclaimers: nil, items: children)]
+                    let children = groupedMenu
+                    nodes = [MenuNode(name: subtitle, type: .header, allergens: nil, preferences: nil, disclaimers: nil, timingInfo: nil, items: children)]
                 } else {
-                    nodes = station.menu.map { menuNodeFrom($0) }
+                    nodes = groupedMenu
                 }
                 stationsDict[station.station] = nodes
             }
             result[meal.name] = stationsDict
         }
         return result
+    }
+
+    nonisolated private func groupedMenuNodes(from items: [DiningAPIMenuItem]) -> [MenuNode] {
+        var nodes: [MenuNode] = []
+        var currentSection: PendingSection?
+
+        func flushCurrentSection() {
+            guard let section = currentSection else { return }
+
+            nodes.append(
+                MenuNode(
+                    name: section.title,
+                    type: .header,
+                    allergens: nil,
+                    preferences: nil,
+                    disclaimers: nil,
+                    timingInfo: section.timingInfo,
+                    items: section.items.isEmpty ? nil : section.items
+                )
+            )
+
+            currentSection = nil
+        }
+
+        for item in items {
+            switch parsedMenuEntry(from: item) {
+            case .header(let title, let timingInfo):
+                flushCurrentSection()
+                currentSection = PendingSection(title: title, timingInfo: timingInfo, items: [])
+            case .info(let title, let timingInfo):
+                if title.isEmpty, var section = currentSection {
+                    section = PendingSection(title: section.title, timingInfo: timingInfo, items: section.items)
+                    currentSection = section
+                } else {
+                    flushCurrentSection()
+                    nodes.append(
+                        MenuNode(
+                            name: title,
+                            type: .info,
+                            allergens: nil,
+                            preferences: nil,
+                            disclaimers: nil,
+                            timingInfo: timingInfo,
+                            items: nil
+                        )
+                    )
+                }
+            case .item:
+                let node = menuNodeFrom(item)
+                if var section = currentSection {
+                    section.items.append(node)
+                    currentSection = section
+                } else {
+                    nodes.append(node)
+                }
+            }
+        }
+
+        flushCurrentSection()
+        return nodes
+    }
+
+    nonisolated private func parsedMenuEntry(from item: DiningAPIMenuItem) -> ParsedMenuEntry {
+        let trimmed = item.item.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return .item }
+        guard item.allergens.isEmpty, item.preferences.isEmpty else { return .item }
+
+        if let parsedTimingLine = parsedTimingLine(from: trimmed) {
+            switch parsedTimingLine {
+            case .statusOnly(let timingInfo):
+                return .info(title: "", timingInfo: timingInfo)
+            case .titled(let title, let timingInfo):
+                return isAllCapsTitle(title)
+                    ? .header(title: title, timingInfo: timingInfo)
+                    : .info(title: title, timingInfo: timingInfo)
+            }
+        }
+
+        return isAllCapsTitle(trimmed) ? .header(title: trimmed, timingInfo: nil) : .item
+    }
+
+    nonisolated private func parsedTimingLine(from text: String) -> ParsedTimingLine? {
+        let patterns: [(String, MenuTimingKind)] = [
+            ("^STATION\\s+OPENS\\s+AT\\s+(.+)$", .opensAt),
+            ("^(.+?)\\s*\\(?AVAILABLE\\s+UNTIL\\s+(.+?)\\)?$", .availableUntil),
+            ("^(.+?)\\s*\\(?AVAILABLE\\s+FROM\\s+(.+?)\\)?$", .availableFrom),
+            ("^(.+?)\\s*\\(?AVAILABLE\\s+AT\\s+(.+?)\\)?$", .availableAt),
+            ("^(.+?)\\s*\\(?SERVED\\s+AT\\s+(.+?)\\)?$", .servedAt),
+            ("^(.+?)\\s*\\(?OPENS\\s+AT\\s+(.+?)\\)?$", .opensAt)
+        ]
+
+        for (pattern, kind) in patterns {
+            guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]) else { continue }
+            let range = NSRange(text.startIndex..<text.endIndex, in: text)
+            guard let match = regex.firstMatch(in: text, options: [], range: range) else { continue }
+
+            if match.numberOfRanges == 2,
+               let timeRange = Range(match.range(at: 1), in: text) {
+                return .statusOnly(
+                    MenuTimingInfo(
+                        kind: kind,
+                        timeText: normalizedTimeText(from: String(text[timeRange]))
+                    )
+                )
+            }
+
+            if match.numberOfRanges >= 3,
+               let titleRange = Range(match.range(at: 1), in: text),
+               let timeRange = Range(match.range(at: 2), in: text) {
+                let title = cleanedHeaderTitle(String(text[titleRange]))
+                let timeText = normalizedTimeText(from: String(text[timeRange]))
+
+                guard !timeText.isEmpty else { return nil }
+                if title.isEmpty || title.uppercased() == "STATION" {
+                    return .statusOnly(MenuTimingInfo(kind: kind, timeText: timeText))
+                }
+                return .titled(title: title, timingInfo: MenuTimingInfo(kind: kind, timeText: timeText))
+            }
+        }
+
+        return nil
+    }
+
+    nonisolated private func cleanedHeaderTitle(_ title: String) -> String {
+        title
+            .trimmingCharacters(in: CharacterSet(charactersIn: " ()").union(.whitespacesAndNewlines))
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    }
+
+    nonisolated private func normalizedTimeText(from text: String) -> String {
+        text
+            .trimmingCharacters(in: CharacterSet(charactersIn: " ()").union(.whitespacesAndNewlines))
+            .replacingOccurrences(of: "\\s+", with: " ", options: .regularExpression)
+    }
+
+    nonisolated private func isAllCapsTitle(_ text: String) -> Bool {
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return false }
+
+        let words = trimmed.split(whereSeparator: \.isWhitespace)
+        guard words.count >= 1 else { return false }
+
+        let letters = trimmed.unicodeScalars.filter(CharacterSet.letters.contains)
+        guard !letters.isEmpty else { return false }
+
+        return letters.allSatisfy { CharacterSet.uppercaseLetters.contains($0) }
     }
 
     nonisolated private func menuNodeFrom(_ item: DiningAPIMenuItem) -> MenuNode {
@@ -228,8 +375,26 @@ class DiningFetcher: ObservableObject {
             allergens: allergens.isEmpty ? nil : allergens,
             preferences: preferences.isEmpty ? nil : preferences,
             disclaimers: nil,
+            timingInfo: nil,
             items: nil
         )
+    }
+
+    private struct PendingSection {
+        let title: String
+        let timingInfo: MenuTimingInfo?
+        var items: [MenuNode]
+    }
+
+    private enum ParsedMenuEntry {
+        case item
+        case header(title: String, timingInfo: MenuTimingInfo?)
+        case info(title: String, timingInfo: MenuTimingInfo)
+    }
+
+    private enum ParsedTimingLine {
+        case statusOnly(MenuTimingInfo)
+        case titled(title: String, timingInfo: MenuTimingInfo)
     }
 
     // MARK: - Per-Date Disk Cache
