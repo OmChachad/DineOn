@@ -166,9 +166,9 @@ struct ContentView: View {
                 }
             }
         }
-//        .refreshable {
-//            await fetcher.refresh(for: chosenDate)
-//        }
+        .refreshable {
+            await fetcher.refresh(for: chosenDate)
+        }
         .safeAreaBar(edge: .bottom) {
             if !meals.isEmpty {
                 mealSelector(availableMeals: meals, activeMeal: activeMeal)

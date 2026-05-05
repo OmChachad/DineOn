@@ -19,6 +19,11 @@ enum DateFetchState: Equatable {
     case error(String)
 }
 
+private enum VenueFetchResult {
+    case menu([MealName: [StationName: [MenuNode]]])
+    case noMenu
+}
+
 // MARK: - DiningFetcher
 
 @MainActor
@@ -116,32 +121,51 @@ class DiningFetcher: ObservableObject {
     private func fetchFromAPI(for dateString: String) async {
         fetchStates[dateString] = .loading
 
+        let hadExistingData = menuData[dateString] != nil
         var venueResults: [VenueName: [MealName: [StationName: [MenuNode]]]] = [:]
+        var hadSuccessfulVenueResponse = false
 
-        await withTaskGroup(of: (DiningVenue, [MealName: [StationName: [MenuNode]]]?).self) { group in
+        await withTaskGroup(of: (DiningVenue, VenueFetchResult?).self) { group in
             for venue in DiningVenue.allCases {
                 group.addTask { [self] in
                     let result = try? await self.fetchVenueMenu(venue: venue, dateString: dateString)
                     return (venue, result)
                 }
             }
-            for await (venue, venueMenu) in group {
-                if let venueMenu { venueResults[venue.rawValue] = venueMenu }
+            for await (venue, result) in group {
+                guard let result else { continue }
+                hadSuccessfulVenueResponse = true
+
+                switch result {
+                case .menu(let venueMenu):
+                    venueResults[venue.rawValue] = venueMenu
+                case .noMenu:
+                    break
+                }
             }
         }
 
-        if venueResults.isEmpty {
-            fetchStates[dateString] = isOnline ? .noMenu : .error("Network error.")
+        if !venueResults.isEmpty {
+            menuData[dateString] = venueResults
+            fetchStates[dateString] = .loaded
+            Self.saveCache(for: dateString, data: venueResults)
+
+            if Preferences.shared.notificationsEnabled {
+                Task { await NotificationManager.shared.scheduleDailyNotification() }
+            }
             return
         }
 
-        menuData[dateString] = venueResults
-        fetchStates[dateString] = .loaded
-        Self.saveCache(for: dateString, data: venueResults)
-
-        if Preferences.shared.notificationsEnabled {
-            Task { await NotificationManager.shared.scheduleDailyNotification() }
+        if hadSuccessfulVenueResponse {
+            menuData.removeValue(forKey: dateString)
+            fetchStates[dateString] = .noMenu
+            Self.removeCache(for: dateString)
+            return
         }
+
+        fetchStates[dateString] = hadExistingData
+            ? .loaded
+            : .error("Couldn't load menu right now.")
     }
 
     // MARK: - API Helpers (nonisolated for TaskGroup)
@@ -158,16 +182,21 @@ class DiningFetcher: ObservableObject {
         return comps?.url
     }
 
-    nonisolated private func fetchVenueMenu(venue: DiningVenue, dateString: String) async throws -> [MealName: [StationName: [MenuNode]]]? {
-        guard let url = apiURL(venue: venue, dateString: dateString) else { return nil }
+    nonisolated private func fetchVenueMenu(venue: DiningVenue, dateString: String) async throws -> VenueFetchResult {
+        guard let url = apiURL(venue: venue, dateString: dateString) else {
+            throw URLError(.badURL)
+        }
 
         let (data, response) = try await URLSession.shared.data(from: url)
-        guard (response as? HTTPURLResponse)?.statusCode == 200, !data.isEmpty else { return nil }
+        guard (response as? HTTPURLResponse)?.statusCode == 200, !data.isEmpty else {
+            throw URLError(.badServerResponse)
+        }
 
-        guard let apiResponse = try? decodeDiningAPIResponse(from: data),
-              let meals = apiResponse.meals, !meals.isEmpty else { return nil }
+        let apiResponse = try decodeDiningAPIResponse(from: data)
+        guard let meals = apiResponse.meals else { return .noMenu }
+        let transformed = transformToAppFormat(meals: meals)
 
-        return transformToAppFormat(meals: meals)
+        return transformed.isEmpty ? .noMenu : .menu(transformed)
     }
 
     nonisolated private func transformToAppFormat(meals: [DiningAPIMeal]) -> [MealName: [StationName: [MenuNode]]] {
@@ -228,6 +257,10 @@ class DiningFetcher: ObservableObject {
         if let encoded = try? JSONEncoder().encode(data) {
             try? encoded.write(to: cacheURL(for: dateString), options: .atomic)
         }
+    }
+
+    nonisolated private static func removeCache(for dateString: String) {
+        try? FileManager.default.removeItem(at: cacheURL(for: dateString))
     }
 
     /// Loads all cached dates into memory (offline seed on launch).
