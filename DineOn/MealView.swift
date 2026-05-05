@@ -39,7 +39,8 @@ struct MealView: View {
                 ForEach(stations, id: \.self) { station in
                     let stationNodes = fetcher.menuData[chosenDate]?[venueName]?[meal]?[station] ?? []
                     let stationTimingNode = stationNodes.first(where: isStationTimingNode)
-                    let visibleNodes = stationNodes.filter { $0 != stationTimingNode }
+                    let stationWarningNode = stationNodes.first(where: isStationWarningNode)
+                    let visibleNodes = stationNodes.filter { $0 != stationTimingNode && $0 != stationWarningNode }
 
                     IndentedDisclosureGroup(expandedByDefault: true) {
                         ForEach(visibleNodes, id: \.self) { node in
@@ -48,6 +49,7 @@ struct MealView: View {
                     } label: {
                         StationHeaderLabel(
                             title: station,
+                            warningText: stationWarningNode.map(stationWarningDisplayText),
                             timingText: stationTimingNode.flatMap { timingDisplayText(for: $0, chosenDate: chosenDate) }
                         )
                     }

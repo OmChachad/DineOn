@@ -109,6 +109,28 @@ func isAAZNode(_ node: MenuNode) -> Bool {
         .localizedCaseInsensitiveContains("AAZ ")
 }
 
+let nutsAndPeanutsWarningText = "*NUTS AND PEANUTS ARE USED HERE*"
+let stationWarningDisclaimerMarker = "station-warning"
+
+func isNutsAndPeanutsWarningText(_ text: String) -> Bool {
+    text.trimmingCharacters(in: .whitespacesAndNewlines) == nutsAndPeanutsWarningText
+}
+
+func isStationWarningNode(_ node: MenuNode) -> Bool {
+    (node.type == .info && (node.disclaimers ?? []).contains(stationWarningDisclaimerMarker))
+        || isNutsAndPeanutsWarningText(node.name)
+}
+
+func displayNutsAndPeanutsWarning(_ text: String) -> String {
+    text
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .trimmingCharacters(in: CharacterSet(charactersIn: "*"))
+}
+
+func stationWarningDisplayText(for node: MenuNode) -> String {
+    displayNutsAndPeanutsWarning(node.name)
+}
+
 // MARK: - Wrapper
 
 struct DiningMenu: Codable {

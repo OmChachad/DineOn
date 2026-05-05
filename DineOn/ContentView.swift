@@ -289,7 +289,8 @@ struct MealContentView: View {
         ForEach(visibleStations, id: \.self) { station in
             let stationNodes = fetcher.menuData[chosenDate]?[venueName]?[meal]?[station] ?? []
             let stationTimingNode = stationNodes.first(where: isStationTimingNode)
-            let visibleNodes = stationNodes.filter { $0 != stationTimingNode }
+            let stationWarningNode = stationNodes.first(where: isStationWarningNode)
+            let visibleNodes = stationNodes.filter { $0 != stationTimingNode && $0 != stationWarningNode }
 
             IndentedDisclosureGroup(expandedByDefault: true) {
                 ForEach(visibleNodes, id: \.self) { node in
@@ -298,6 +299,7 @@ struct MealContentView: View {
             } label: {
                 StationHeaderLabel(
                     title: displayStationName(station, hasAAZAccess: preferences.hasAAZAccess),
+                    warningText: stationWarningNode.map(stationWarningDisplayText),
                     timingText: stationTimingNode.flatMap { timingDisplayText(for: $0, chosenDate: chosenDate) }
                 )
             }
@@ -316,6 +318,7 @@ struct MealContentView: View {
 
 struct StationHeaderLabel: View {
     let title: String
+    var warningText: String?
     var timingText: String?
 
     var body: some View {
@@ -325,6 +328,13 @@ struct StationHeaderLabel: View {
                 .bold()
                 .foregroundStyle(.primary)
                 .multilineTextAlignment(.leading)
+
+            if let warningText, !warningText.isEmpty {
+                Text(warningText)
+                    .font(.subheadline.weight(.medium))
+                    .foregroundStyle(Color.yellow.opacity(0.72))
+                    .multilineTextAlignment(.leading)
+            }
 
             if let timingText {
                 Text(timingText)

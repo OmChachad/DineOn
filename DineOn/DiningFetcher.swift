@@ -205,14 +205,17 @@ class DiningFetcher: ObservableObject {
             guard !meal.stations.isEmpty else { continue }
             var stationsDict: [StationName: [MenuNode]] = [:]
             for station in meal.stations {
-                let groupedMenu = groupedMenuNodes(from: station.menu)
-                let nodes: [MenuNode]
+                let stationWarningNode = stationWarningNode(from: station.menu)
+                let menuItems = station.menu.filter { !isNutsAndPeanutsWarningText($0.item) }
+                let groupedMenu = groupedMenuNodes(from: menuItems)
+                let contentNodes: [MenuNode]
                 if let subtitle = station.subtitle, !subtitle.isEmpty {
                     let children = groupedMenu
-                    nodes = [MenuNode(name: subtitle, type: .header, allergens: nil, preferences: nil, disclaimers: nil, timingInfo: nil, items: children)]
+                    contentNodes = [MenuNode(name: subtitle, type: .header, allergens: nil, preferences: nil, disclaimers: nil, timingInfo: nil, items: children)]
                 } else {
-                    nodes = groupedMenu
+                    contentNodes = groupedMenu
                 }
+                let nodes = stationWarningNode.map { [$0] + contentNodes } ?? contentNodes
                 stationsDict[station.station] = nodes
             }
             result[meal.name] = stationsDict
@@ -375,6 +378,22 @@ class DiningFetcher: ObservableObject {
             allergens: allergens.isEmpty ? nil : allergens,
             preferences: preferences.isEmpty ? nil : preferences,
             disclaimers: nil,
+            timingInfo: nil,
+            items: nil
+        )
+    }
+
+    nonisolated private func stationWarningNode(from items: [DiningAPIMenuItem]) -> MenuNode? {
+        guard let warningItem = items.first(where: { isNutsAndPeanutsWarningText($0.item) }) else {
+            return nil
+        }
+
+        return MenuNode(
+            name: displayNutsAndPeanutsWarning(warningItem.item),
+            type: .info,
+            allergens: nil,
+            preferences: nil,
+            disclaimers: [stationWarningDisclaimerMarker],
             timingInfo: nil,
             items: nil
         )
