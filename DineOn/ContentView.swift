@@ -279,13 +279,14 @@ struct ContentView: View {
 
 struct MealContentView: View {
     @ObservedObject private var fetcher = DiningFetcher.shared
+    @ObservedObject private var preferences = Preferences.shared
 
     var meal: MealName
     var venueName: VenueName
     var chosenDate: String
 
     var body: some View {
-        ForEach(fetcher.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? [], id: \.self) { station in
+        ForEach(visibleStations, id: \.self) { station in
             let stationNodes = fetcher.menuData[chosenDate]?[venueName]?[meal]?[station] ?? []
             let stationTimingNode = stationNodes.first(where: isStationTimingNode)
             let visibleNodes = stationNodes.filter { $0 != stationTimingNode }
@@ -296,11 +297,20 @@ struct MealContentView: View {
                 }
             } label: {
                 StationHeaderLabel(
-                    title: station,
+                    title: displayStationName(station, hasAAZAccess: preferences.hasAAZAccess),
                     timingText: stationTimingNode.flatMap { timingDisplayText(for: $0, chosenDate: chosenDate) }
                 )
             }
         }
+    }
+
+    private var visibleStations: [String] {
+        let stations = fetcher.menuData[chosenDate]?[venueName]?[meal]?.keys.sorted() ?? []
+        guard venueName == DiningVenue.parkside.rawValue, !preferences.hasAAZAccess else {
+            return stations
+        }
+
+        return stations.filter { !isAAZStation($0) }
     }
 }
 

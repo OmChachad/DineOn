@@ -88,6 +88,27 @@ let mealOrder: [String: Int] = [
     "Dinner": 4
 ]
 
+let allergenAwarenessZoneStationMarker = "Allergen Awareness Zone"
+let allergenAwarenessZoneAccessSuffix = "(must register for access)"
+
+func isAAZStation(_ stationName: String) -> Bool {
+    stationName.localizedCaseInsensitiveContains(allergenAwarenessZoneStationMarker)
+}
+
+func displayStationName(_ stationName: String, hasAAZAccess: Bool) -> String {
+    guard hasAAZAccess, isAAZStation(stationName) else { return stationName }
+
+    return stationName
+        .replacingOccurrences(of: allergenAwarenessZoneAccessSuffix, with: "", options: .caseInsensitive)
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+}
+
+func isAAZNode(_ node: MenuNode) -> Bool {
+    node.name
+        .trimmingCharacters(in: .whitespacesAndNewlines)
+        .localizedCaseInsensitiveContains("AAZ ")
+}
+
 // MARK: - Wrapper
 
 struct DiningMenu: Codable {

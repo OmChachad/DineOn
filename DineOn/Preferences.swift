@@ -17,6 +17,7 @@ final class Preferences: ObservableObject {
         self.selectedAllergens = Set(UserDefaults.standard.stringArray(forKey: "selectedAllergens") ?? [])
         self.selectedDietaryPreferences = Set(UserDefaults.standard.stringArray(forKey: "selectedDietaryPreferences") ?? [])
         self.excludedKeywords = Set(UserDefaults.standard.stringArray(forKey: "excludedKeywords") ?? [])
+        self.hasAAZAccess = UserDefaults.standard.bool(forKey: "hasAAZAccess")
         self.hasDietaryRestrictions = UserDefaults.standard.bool(forKey: "hasDietaryRestrictions")
         self.favoriteDishes = Set(UserDefaults.standard.stringArray(forKey: "favoriteDishes") ?? [])
         self.notificationsEnabled = UserDefaults.standard.bool(forKey: "notificationsEnabled")
@@ -33,6 +34,12 @@ final class Preferences: ObservableObject {
     }
 
     // MARK: - Published properties
+    @Published var hasAAZAccess: Bool {
+        didSet {
+            UserDefaults.standard.set(hasAAZAccess, forKey: "hasAAZAccess")
+        }
+    }
+
     @Published var hasDietaryRestrictions: Bool {
         didSet {
             UserDefaults.standard.set(hasDietaryRestrictions, forKey: "hasDietaryRestrictions")

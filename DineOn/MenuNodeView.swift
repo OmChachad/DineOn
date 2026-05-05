@@ -17,13 +17,15 @@ struct MenuNodeView: View {
         Group {
             switch node.type {
             case .item:
-                if itemFitsPreferences(node) {
+                if shouldDisplayNode(node) && itemFitsPreferences(node) {
                     MenuItemView(node: node, chosenDate: chosenDate)
                 }
             case .info:
-                MenuInfoView(node: node, chosenDate: chosenDate)
+                if shouldDisplayNode(node) {
+                    MenuInfoView(node: node, chosenDate: chosenDate)
+                }
             case .header, .timeHeader:
-                if let items = node.items, !items.isEmpty {
+                if shouldDisplayNode(node), let items = node.items, !items.isEmpty {
                     IndentedDisclosureGroup(expandedByDefault: true) {
                         ForEach(items, id: \.name) { item in
                             MenuNodeView(node: item, chosenDate: chosenDate)
@@ -32,13 +34,17 @@ struct MenuNodeView: View {
                     } label: {
                         MenuHeaderLabel(node: node, chosenDate: chosenDate)
                     }
-                } else {
+                } else if shouldDisplayNode(node) {
                     MenuHeaderLabel(node: node, chosenDate: chosenDate)
                 }
             }
         }
         
             .environmentObject(preferences)
+    }
+
+    func shouldDisplayNode(_ node: MenuNode) -> Bool {
+        preferences.hasAAZAccess || !isAAZNode(node)
     }
     
     func itemFitsPreferences(_ node: MenuNode) -> Bool {

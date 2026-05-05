@@ -16,6 +16,8 @@ struct PreferencesView: View {
     var body: some View {
         Form {
             Section("Allergens") {
+                Toggle("Allergen Awareness Zone (AAZ) access", isOn: $preferences.hasAAZAccess)
+                
                 DisclosureGroup("Allergens") {
                     ForEach(Allergen.allCases.filter({ $0 != .notAnalyzed && $0 != .unknown }), id: \.self) { allergen in
                         Toggle(isOn: Binding(
