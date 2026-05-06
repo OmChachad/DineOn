@@ -1,0 +1,61 @@
+{
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I want to lose weight without feeling exhausted.",
+      "Prefer vegetarian meals with more protein."
+    ],
+    "healthkit": {
+      "age": 34,
+      "sex": "female",
+      "height_cm": 165,
+      "weight_kg": 78,
+      "bmi": 28.7,
+      "resting_calories": 1580,
+      "active_calories_avg": 320,
+      "tdee": 1900,
+      "steps_daily_avg": 4200,
+      "exercise_sessions_per_week": 1,
+      "sleep_hrs_avg": 6.1,
+      "resting_hr_avg": 74,
+      "weight_trend_30d_kg": 1.2
+    }
+  },
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-06T20:15:00Z",
+    "daily_calories": 1650,
+    "protein_g": 105,
+    "carbs_g": 165,
+    "fat_g": 60,
+    "calorie_rationale": "A modest deficit from an estimated TDEE of 1,900 kcal supports gradual weight loss while keeping energy intake realistic.",
+    "meal_pattern": "3 meals and 1 snack",
+    "foods_to_prioritize": [
+      "eggs",
+      "Greek yogurt",
+      "lentils",
+      "tofu",
+      "leafy greens",
+      "whole grains"
+    ],
+    "foods_to_avoid": [
+      "highly processed snack foods",
+      "sugar-sweetened beverages"
+    ],
+    "watch_nutrients": [
+      "iron",
+      "vitamin B12",
+      "vitamin D"
+    ],
+    "sleep_note": "Your recent sleep average may be working against appetite regulation and recovery, so improving sleep consistency matters here.",
+    "summary": "This profile aims for gradual weight loss with higher protein and better micronutrient coverage. Lean vegetarian protein sources, whole foods, and consistent meals should help support energy while keeping calories controlled. Improving sleep is also likely to help recovery and adherence.",
+    "sources": [
+      "Dietary_Guidelines_For_Americans.md",
+      "Scientific_Foundations.md",
+      "Daily_Servings_By_Calorie_Level.md"
+    ],
+    "warnings": [
+      "Consult your doctor or dietitian before using these targets as medical nutrition advice."
+    ]
+  }
+}

@@ -354,6 +354,8 @@ func isStationTimingNode(_ node: MenuNode) -> Bool {
     node.type == .info && node.name.isEmpty && node.timingInfo != nil
 }
 
-#Preview {
-    ContentView()
+struct ContentView_Previews: PreviewProvider {
+    static var previews: some View {
+        ContentView()
+    }
 }

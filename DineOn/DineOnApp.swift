@@ -18,6 +18,9 @@ struct DineOnApp: App {
                         Task { await NotificationManager.shared.scheduleDailyNotification() }
                     }
                 }
+                .task {
+                    await NutritionProfileRepository.shared.loadIfNeeded()
+                }
         }
     }
 }
