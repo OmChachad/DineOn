@@ -9,8 +9,8 @@ from pipeline.openai_client import OpenAIClient
 from pipeline.rag_ingest import KnowledgeBase
 
 MAX_QUERY_HINTS = 3
-RESULTS_PER_HINT = 3
-MAX_NARRATIVE_CHUNKS = 4
+RESULTS_PER_HINT = 4
+MAX_NARRATIVE_CHUNKS = 5
 MIN_ACCEPTED_SCORE = 0.35
 
 GENERIC_HEADING_TERMS = {"background", "introduction", "overview"}
@@ -146,30 +146,7 @@ class NutritionRAGService:
                     collected[chunk_id] = candidate
 
         ranked = sorted(collected.values(), key=lambda item: item.score, reverse=True)
-        selected: list[NarrativeEvidenceChunk] = []
-        heading_counts: dict[str, int] = {}
-        source_counts: dict[str, int] = {}
-        selected_texts: list[set[str]] = []
-
-        for candidate in ranked:
-            if self._is_near_duplicate(candidate, selected_texts):
-                continue
-
-            heading_key = candidate.heading_path.casefold()
-            source_key = candidate.source_file.casefold()
-            adjusted_score = candidate.score
-            adjusted_score -= heading_counts.get(heading_key, 0) * 0.2
-            adjusted_score -= source_counts.get(source_key, 0) * 0.05
-            if adjusted_score <= 0:
-                continue
-            selected.append(candidate.model_copy(update={"score": round(adjusted_score, 6)}))
-            heading_counts[heading_key] = heading_counts.get(heading_key, 0) + 1
-            source_counts[source_key] = source_counts.get(source_key, 0) + 1
-            selected_texts.append(self._tokenize_text(candidate.text))
-            if len(selected) == MAX_NARRATIVE_CHUNKS:
-                break
-
-        return selected
+        return self._select_diverse_chunks(ranked, intent, context)
 
     def _build_retrieval_context(
         self,
@@ -227,6 +204,113 @@ class NutritionRAGService:
         words = set(re.findall(r"[a-zA-Z]{4,}", document.casefold()))
         overlap = len(words & exact_terms)
         return min(0.35, overlap * 0.05)
+
+    def _select_diverse_chunks(
+        self,
+        ranked: list[NarrativeEvidenceChunk],
+        intent: NutritionIntent,
+        context: RetrievalContext,
+    ) -> list[NarrativeEvidenceChunk]:
+        selected: list[NarrativeEvidenceChunk] = []
+        heading_counts: dict[str, int] = {}
+        source_counts: dict[str, int] = {}
+        selected_texts: list[set[str]] = []
+        desired_topics = self._desired_topics(intent, context)
+
+        for topic in desired_topics:
+            for candidate in ranked:
+                if any(existing.chunk_id == candidate.chunk_id for existing in selected):
+                    continue
+                if topic not in self._candidate_topics(candidate):
+                    continue
+                adjusted = self._adjust_candidate_score(candidate, heading_counts, source_counts, selected_texts)
+                if adjusted is None:
+                    continue
+                selected.append(adjusted)
+                heading_counts[adjusted.heading_path.casefold()] = heading_counts.get(adjusted.heading_path.casefold(), 0) + 1
+                source_counts[adjusted.source_file.casefold()] = source_counts.get(adjusted.source_file.casefold(), 0) + 1
+                selected_texts.append(self._tokenize_text(adjusted.text))
+                break
+            if len(selected) == MAX_NARRATIVE_CHUNKS:
+                return selected
+
+        for candidate in ranked:
+            if any(existing.chunk_id == candidate.chunk_id for existing in selected):
+                continue
+            adjusted = self._adjust_candidate_score(candidate, heading_counts, source_counts, selected_texts)
+            if adjusted is None:
+                continue
+            selected.append(adjusted)
+            heading_counts[adjusted.heading_path.casefold()] = heading_counts.get(adjusted.heading_path.casefold(), 0) + 1
+            source_counts[adjusted.source_file.casefold()] = source_counts.get(adjusted.source_file.casefold(), 0) + 1
+            selected_texts.append(self._tokenize_text(adjusted.text))
+            if len(selected) == MAX_NARRATIVE_CHUNKS:
+                break
+
+        return selected
+
+    def _adjust_candidate_score(
+        self,
+        candidate: NarrativeEvidenceChunk,
+        heading_counts: dict[str, int],
+        source_counts: dict[str, int],
+        selected_texts: list[set[str]] | None = None,
+    ) -> NarrativeEvidenceChunk | None:
+        if selected_texts is not None and self._is_near_duplicate(candidate, selected_texts):
+            return None
+
+        heading_key = candidate.heading_path.casefold()
+        source_key = candidate.source_file.casefold()
+        adjusted_score = candidate.score
+        adjusted_score -= heading_counts.get(heading_key, 0) * 0.2
+        adjusted_score -= source_counts.get(source_key, 0) * 0.05
+        if adjusted_score <= 0:
+            return None
+        return candidate.model_copy(update={"score": round(adjusted_score, 6)})
+
+    def _desired_topics(self, intent: NutritionIntent, context: RetrievalContext) -> list[str]:
+        raw_terms = " ".join(
+            [
+                intent.primary_goal,
+                *intent.secondary_goals,
+                *intent.dietary_restrictions,
+                *intent.special_flags,
+                *intent.medical_flags,
+                *intent.rag_query_hints,
+            ]
+        ).casefold()
+        topics: list[str] = []
+
+        if any(term in raw_terms for term in ("weight", "fat", "muscle", "protein", "satiety", "maintenance", "gain")):
+            topics.append("protein")
+        if any(term in raw_terms for term in ("fiber", "carb", "grain", "fruit", "vegetable", "microbiome", "processed", "blood sugar", "gut", "satiety")):
+            topics.append("carb_fiber")
+        elif any(term in raw_terms for term in ("weight_loss", "fat_loss", "weight loss", "fat loss", "visceral")):
+            topics.append("carb_fiber")
+        if "low_sleep" in intent.special_flags or "sleep" in raw_terms:
+            topics.append("sleep")
+        if intent.dietary_restrictions:
+            topics.append("restriction_support")
+        if context.requested_topics:
+            topics.append("fats")
+
+        seen: set[str] = set()
+        return [topic for topic in topics if not (topic in seen or seen.add(topic))]
+
+    def _candidate_topics(self, candidate: NarrativeEvidenceChunk) -> set[str]:
+        text = f"{candidate.heading_path} {candidate.text}".casefold()
+        topics: set[str] = set()
+        if any(term in text for term in ("protein", "lean mass", "muscle", "amino", "eggs", "poultry", "beans", "lentils", "tofu", "tempeh")):
+            topics.add("protein")
+        if any(term in text for term in ("carbohydrate", "fiber", "whole grain", "whole grains", "vegetable", "vegetables", "fruit", "fruits", "microbiome", "processed", "satiety")):
+            topics.add("carb_fiber")
+        if any(term in text for term in ("sleep", "appetite", "circadian")):
+            topics.add("sleep")
+        if any(term in text for term in ("beans", "lentils", "tofu", "tempeh", "eggs", "poultry", "dairy", "nuts", "seeds")):
+            topics.add("restriction_support")
+        if any(term in text for term in FATS_TOPIC_TERMS):
+            topics.add("fats")
+        return topics
 
     def _should_exclude_chunk(self, heading_path: str, document: str, context: RetrievalContext) -> bool:
         heading = heading_path.casefold()

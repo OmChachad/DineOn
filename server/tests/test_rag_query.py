@@ -184,3 +184,50 @@ def test_retrieve_drops_seafood_and_medical_chunks_when_not_requested() -> None:
     selected = asyncio.run(service._retrieve_narrative_chunks(intent, healthkit))
 
     assert [chunk.chunk_id for chunk in selected] == ["protein-1"]
+
+
+def test_retrieve_preserves_topic_coverage_for_protein_fiber_and_sleep() -> None:
+    result = {
+        "documents": [[
+            "Higher-protein diets improved fat loss and preserved lean mass during calorie restriction.",
+            "Fiber-rich vegetables, fruits, beans, and whole grains improve satiety and carbohydrate quality.",
+            "Short sleep duration is associated with poorer appetite regulation and more difficulty with weight management.",
+            "Another protein summary about preserving lean mass during weight loss.",
+        ]],
+        "metadatas": [[
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition"},
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 4. Carbohydrates > Microbiome"},
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 8. Sleep and Weight Management"},
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 6. Dietary Protein > Recommendations: Protein"},
+        ]],
+        "distances": [[0.10, 0.20, 0.24, 0.11]],
+        "ids": [[
+            "protein-1",
+            "fiber-1",
+            "sleep-1",
+            "protein-2",
+        ]],
+    }
+    knowledge_base = KnowledgeBase(
+        chroma_client=StubChromaClient(result),  # type: ignore[arg-type]
+        collection_name="unused",
+        serving_rows=[],
+    )
+    service = NutritionRAGService(knowledge_base, ConfiguredStubOpenAIClient())  # type: ignore[arg-type]
+    intent = NutritionIntent(
+        primary_goal="weight_loss",
+        secondary_goals=["visceral_fat_reduction"],
+        dietary_restrictions=[],
+        special_flags=["low_sleep"],
+        medical_flags=[],
+        rag_query_hints=[
+            "high protein low calorie meals",
+            "fiber and satiety for weight loss",
+            "sleep deprivation appetite and weight management",
+        ],
+    )
+    healthkit = HealthKitSnapshot(age=19)
+
+    selected = asyncio.run(service._retrieve_narrative_chunks(intent, healthkit))
+
+    assert [chunk.chunk_id for chunk in selected[:3]] == ["protein-1", "fiber-1", "sleep-1"]
