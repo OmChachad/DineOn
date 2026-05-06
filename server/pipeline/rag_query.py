@@ -9,8 +9,8 @@ from pipeline.openai_client import OpenAIClient
 from pipeline.rag_ingest import KnowledgeBase
 
 MAX_QUERY_HINTS = 3
-RESULTS_PER_HINT = 4
-MAX_NARRATIVE_CHUNKS = 5
+RESULTS_PER_HINT = 5
+MAX_NARRATIVE_CHUNKS = 6
 MIN_ACCEPTED_SCORE = 0.35
 
 GENERIC_HEADING_TERMS = {"background", "introduction", "overview"}
