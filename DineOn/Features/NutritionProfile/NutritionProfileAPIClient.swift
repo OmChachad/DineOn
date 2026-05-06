@@ -29,7 +29,7 @@ final class NutritionProfileAPIClient {
 
     init(
         session: URLSession = .shared,
-        baseURL: URL = URL(string: "http://127.0.0.1:8000")!
+        baseURL: URL = URL(string: "https://dineon-production.up.railway.app/")!
     ) {
         self.session = session
         self.baseURL = baseURL
