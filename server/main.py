@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from contextlib import asynccontextmanager
+import asyncio
+from contextlib import asynccontextmanager, suppress
 
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import ValidationError
@@ -14,6 +15,22 @@ from pipeline.safety import apply_safety_checks
 from pipeline.synthesizer import NutritionSynthesizer
 
 
+async def initialize_rag(app: FastAPI) -> None:
+    try:
+        knowledge_base = await ingest_knowledge_base(app.state.openai_client)
+        app.state.rag = NutritionRAGService(knowledge_base, app.state.openai_client)
+        app.state.rag_ready = True
+        app.state.startup_error = None
+        print("✅ Nutrition knowledge base initialized.")
+    except Exception as exc:  # pragma: no cover - surfaced through /health and request errors
+        app.state.rag = None
+        app.state.rag_ready = False
+        app.state.startup_error = str(exc)
+        print(f"❌ Nutrition knowledge base failed to initialize: {exc}")
+    finally:
+        app.state.rag_init_task = None
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     openai_client = OpenAIClient()
@@ -22,13 +39,17 @@ async def lifespan(app: FastAPI):
     app.state.classifier = NutritionClassifier(openai_client)
     app.state.synthesizer = NutritionSynthesizer(openai_client)
     app.state.rag = None
+    app.state.rag_ready = False
+    app.state.rag_init_task = asyncio.create_task(initialize_rag(app))
 
     try:
-        knowledge_base = await ingest_knowledge_base(openai_client)
-        app.state.rag = NutritionRAGService(knowledge_base, openai_client)
-    except Exception as exc:  # pragma: no cover - surfaced through /health and request errors
-        app.state.startup_error = str(exc)
-    yield
+        yield
+    finally:
+        task = app.state.rag_init_task
+        if task is not None and not task.done():
+            task.cancel()
+            with suppress(asyncio.CancelledError):
+                await task
 
 
 app = FastAPI(title="DineOn Nutrition Server", version="0.1.0", lifespan=lifespan)
@@ -37,8 +58,10 @@ app = FastAPI(title="DineOn Nutrition Server", version="0.1.0", lifespan=lifespa
 @app.get("/health")
 async def health(request: Request) -> dict[str, str | bool | None]:
     return {
-        "ok": request.app.state.startup_error is None,
+        "ok": True,
         "openai_configured": request.app.state.openai_client.is_configured,
+        "rag_ready": request.app.state.rag_ready,
+        "rag_initializing": request.app.state.rag_init_task is not None,
         "startup_error": request.app.state.startup_error,
     }
 
@@ -48,10 +71,12 @@ async def analyze_nutrition_profile(
     payload: NutritionProfileRequest,
     request: Request,
 ) -> NutritionProfileResponse:
-    if request.app.state.startup_error is not None or request.app.state.rag is None:
-        raise HTTPException(status_code=503, detail=request.app.state.startup_error or "Nutrition pipeline unavailable.")
     if not request.app.state.openai_client.is_configured:
         raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured.")
+    if request.app.state.startup_error is not None:
+        raise HTTPException(status_code=503, detail=request.app.state.startup_error)
+    if request.app.state.rag is None:
+        raise HTTPException(status_code=503, detail="Nutrition knowledge base is still initializing. Please retry in a moment.")
 
     try:
         intent = await request.app.state.classifier.classify(payload)
