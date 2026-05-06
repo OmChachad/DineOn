@@ -34,7 +34,9 @@ final class NutritionProfileRepository: ObservableObject {
     }
 
     func persistDraft(_ draft: NutritionPreferencesDraft) async {
-        snapshot.draft = draft.normalizedForStorage
+        var updatedSnapshot = snapshot
+        updatedSnapshot.draft = draft.normalizedForStorage
+        snapshot = updatedSnapshot
         await saveSnapshot()
     }
 
