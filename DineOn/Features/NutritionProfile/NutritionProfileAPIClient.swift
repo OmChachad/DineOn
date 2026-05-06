@@ -53,7 +53,9 @@ final class NutritionProfileAPIClient {
         }
 
         guard (200...299).contains(httpResponse.statusCode) else {
-            if let message = try? decoder.decode(ServerErrorResponse.self, from: data).detail {
+            let responseBody = String(data: data, encoding: .utf8) ?? "<unreadable>"
+            print("❌ Nutrition request failed with status \(httpResponse.statusCode): \(responseBody)")
+            if let message = try? decoder.decode(ServerErrorResponse.self, from: data).message {
                 throw NutritionProfileAPIError.serverError(message)
             }
             throw NutritionProfileAPIError.serverError("Nutrition analysis failed with status \(httpResponse.statusCode).")
@@ -63,9 +65,7 @@ final class NutritionProfileAPIClient {
     }
 
     private var encoder: JSONEncoder {
-        let encoder = JSONEncoder()
-        encoder.keyEncodingStrategy = .convertToSnakeCase
-        return encoder
+        JSONEncoder()
     }
 
     private var decoder: JSONDecoder {
@@ -77,5 +77,55 @@ final class NutritionProfileAPIClient {
 }
 
 private struct ServerErrorResponse: Decodable {
-    let detail: String
+    let message: String
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        if let detail = try? container.decode(String.self, forKey: .detail) {
+            message = detail
+            return
+        }
+        if let details = try? container.decode([ValidationDetail].self, forKey: .detail) {
+            message = details.map(\.readableDescription).joined(separator: "\n")
+            return
+        }
+        message = "Nutrition analysis request failed."
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case detail
+    }
+}
+
+private struct ValidationDetail: Decodable {
+    let loc: [ValidationLocation]
+    let msg: String
+
+    var readableDescription: String {
+        let path = loc.map(\.description).joined(separator: ".")
+        return path.isEmpty ? msg : "\(path): \(msg)"
+    }
+}
+
+private enum ValidationLocation: Decodable, CustomStringConvertible {
+    case string(String)
+    case int(Int)
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.singleValueContainer()
+        if let value = try? container.decode(String.self) {
+            self = .string(value)
+        } else {
+            self = .int(try container.decode(Int.self))
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .string(let value):
+            return value
+        case .int(let value):
+            return String(value)
+        }
+    }
 }

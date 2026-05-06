@@ -56,16 +56,17 @@ Return JSON only.
 
 Use the structured serving rows as the primary numeric anchor for calorie-band servings.
 Use the narrative evidence to justify foods, nutrient watchouts, and behavior notes.
+Treat the highest-scoring, most specific evidence as more important than generic life-stage or introductory text.
 Keep the summary to 3-4 sentences in plain English.
 Prefer realistic guidance over aggressive targets.
 Only cite sources that are present in the supplied evidence.
 """.strip()
         payload: dict[str, Any] = {
-            "request": request.model_dump(mode="json"),
+            "request": self._compact_request(request),
             "intent": retrieval.intent.model_dump(mode="json"),
             "provisional_calorie_target": retrieval.provisional_calorie_target,
-            "serving_rows": [row.model_dump(mode="json") for row in retrieval.serving_rows],
-            "narrative_evidence": [chunk.model_dump(mode="json") for chunk in retrieval.narrative_chunks],
+            "serving_rows": [self._compact_serving_row(row) for row in retrieval.serving_rows],
+            "narrative_evidence": [self._compact_chunk(chunk) for chunk in retrieval.narrative_chunks],
         }
         response = await self.openai_client.generate_json(
             model=SYNTHESIZER_MODEL,
@@ -73,7 +74,39 @@ Only cite sources that are present in the supplied evidence.
             schema=schema,
             instructions=instructions,
             payload=payload,
-            max_output_tokens=1200,
+            max_output_tokens=900,
         )
         return NutritionProfileResponse.model_validate(response)
 
+    def _compact_request(self, request: NutritionProfileRequest) -> dict[str, Any]:
+        healthkit = {
+            key: value
+            for key, value in request.healthkit.model_dump(mode="json").items()
+            if value is not None
+        }
+        return {
+            "schema_version": request.schema_version,
+            "preference_notes": request.preference_notes,
+            "healthkit": healthkit,
+        }
+
+    def _compact_serving_row(self, row: Any) -> dict[str, Any]:
+        return {
+            "source": f"Daily Servings By Calorie Level - {row.calorie_level} kcal",
+            "calorie_level": row.calorie_level,
+            "protein_servings": [row.protein_servings_min, row.protein_servings_max],
+            "dairy_servings": row.dairy_servings,
+            "vegetable_servings": row.vegetable_servings,
+            "fruit_servings": row.fruit_servings,
+            "whole_grains": [row.whole_grains_min, row.whole_grains_max],
+            "healthy_fats": row.healthy_fats,
+        }
+
+    def _compact_chunk(self, chunk: Any) -> dict[str, Any]:
+        text = " ".join(chunk.text.split())
+        if len(text) > 900:
+            text = f"{text[:897].rstrip()}..."
+        return {
+            "source": f"{chunk.source_file} - {chunk.heading_path}",
+            "evidence": text,
+        }

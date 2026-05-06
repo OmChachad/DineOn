@@ -88,6 +88,22 @@ struct HealthKitSnapshot: Codable, Equatable {
     var sleepHrsAvg: Double?
     var restingHrAvg: Double?
     var weightTrend30dKg: Double?
+
+    enum CodingKeys: String, CodingKey {
+        case age
+        case sex
+        case heightCm = "height_cm"
+        case weightKg = "weight_kg"
+        case bmi
+        case restingCalories = "resting_calories"
+        case activeCaloriesAvg = "active_calories_avg"
+        case tdee
+        case stepsDailyAvg = "steps_daily_avg"
+        case exerciseSessionsPerWeek = "exercise_sessions_per_week"
+        case sleepHrsAvg = "sleep_hrs_avg"
+        case restingHrAvg = "resting_hr_avg"
+        case weightTrend30dKg = "weight_trend_30d_kg"
+    }
 }
 
 struct NutritionProfile: Codable, Equatable {
@@ -131,6 +147,12 @@ struct NutritionProfileRequestPayload: Codable {
     let schemaVersion: Int
     let preferenceNotes: [String]
     let healthkit: HealthKitSnapshot
+
+    enum CodingKeys: String, CodingKey {
+        case schemaVersion = "schema_version"
+        case preferenceNotes = "preference_notes"
+        case healthkit
+    }
 }
 
 enum NutritionProfileValidationError: LocalizedError {

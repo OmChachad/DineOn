@@ -1,3 +1,5 @@
+import asyncio
+
 from models import HealthKitSnapshot, NutritionIntent, StructuredServingRow
 from pipeline.rag_ingest import KnowledgeBase
 from pipeline.rag_query import NutritionRAGService
@@ -10,6 +12,29 @@ class StubOpenAIClient:
 def make_service(rows: list[StructuredServingRow]) -> NutritionRAGService:
     knowledge_base = KnowledgeBase(chroma_client=None, collection_name="unused", serving_rows=rows)  # type: ignore[arg-type]
     return NutritionRAGService(knowledge_base, StubOpenAIClient())  # type: ignore[arg-type]
+
+
+class StubCollection:
+    def __init__(self, result: dict) -> None:
+        self.result = result
+
+    def query(self, **_: object) -> dict:
+        return self.result
+
+
+class StubChromaClient:
+    def __init__(self, result: dict) -> None:
+        self.result = result
+
+    def get_collection(self, _: str) -> StubCollection:
+        return StubCollection(self.result)
+
+
+class ConfiguredStubOpenAIClient:
+    is_configured = True
+
+    async def embed_texts(self, texts: list[str]) -> list[list[float]]:
+        return [[0.1] * len(texts)]
 
 
 def test_provisional_target_uses_weight_loss_adjustment() -> None:
@@ -59,3 +84,63 @@ def test_serving_row_selection_brackets_nearest_rows() -> None:
     selected = service._select_serving_rows(1700)
 
     assert [row.calorie_level for row in selected] == [1600, 1800]
+
+
+def test_serving_row_selection_uses_no_fallback_when_target_unknown() -> None:
+    rows = [
+        StructuredServingRow(
+            calorie_level=1400,
+            protein_servings_min=2,
+            protein_servings_max=2.5,
+            dairy_servings=2.5,
+            vegetable_servings=1.75,
+            fruit_servings=1.5,
+            whole_grains_min=1.75,
+            whole_grains_max=3.25,
+            healthy_fats=2.5,
+            source_text="1400 row",
+        ),
+    ]
+    service = make_service(rows)
+
+    assert service._select_serving_rows(None) == []
+
+
+def test_retrieve_filters_irrelevant_and_duplicate_population_chunks() -> None:
+    result = {
+        "documents": [[
+            "Higher-protein diets of 1.2-1.6 g/kg/day improved fat loss and preserved lean mass during calorie restriction.",
+            "Young adults should follow general dietary guidelines with whole foods and healthy fats.",
+            "Following the Dietary Guidelines will support optimal health during young adulthood with healthy fats and protein.",
+        ]],
+        "metadatas": [[
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition"},
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 8. Special Considerations for Life Stages and Vegetarians & Vegans > Recommendation: Young Adulthood"},
+            {"source_file": "Dietary_Guidelines_For_Americans.md", "heading_path": "Young Adulthood"},
+        ]],
+        "distances": [[0.15, 0.16, 0.17]],
+        "ids": [[
+            "protein-1",
+            "young-science-1",
+            "young-guidelines-1",
+        ]],
+    }
+    knowledge_base = KnowledgeBase(
+        chroma_client=StubChromaClient(result),  # type: ignore[arg-type]
+        collection_name="unused",
+        serving_rows=[],
+    )
+    service = NutritionRAGService(knowledge_base, ConfiguredStubOpenAIClient())  # type: ignore[arg-type]
+    intent = NutritionIntent(
+        primary_goal="weight_loss",
+        secondary_goals=["visceral_fat_reduction"],
+        dietary_restrictions=[],
+        special_flags=["low_sleep"],
+        medical_flags=[],
+        rag_query_hints=["calorie deficit protein satiety"],
+    )
+    healthkit = HealthKitSnapshot(age=34)
+
+    selected = asyncio.run(service._retrieve_narrative_chunks(intent, healthkit))
+
+    assert [chunk.chunk_id for chunk in selected] == ["protein-1"]
