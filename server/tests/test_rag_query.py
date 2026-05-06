@@ -34,7 +34,7 @@ class ConfiguredStubOpenAIClient:
     is_configured = True
 
     async def embed_texts(self, texts: list[str]) -> list[list[float]]:
-        return [[0.1] * len(texts)]
+        return [[0.1] for _ in texts]
 
 
 def test_provisional_target_uses_weight_loss_adjustment() -> None:
@@ -140,6 +140,46 @@ def test_retrieve_filters_irrelevant_and_duplicate_population_chunks() -> None:
         rag_query_hints=["calorie deficit protein satiety"],
     )
     healthkit = HealthKitSnapshot(age=34)
+
+    selected = asyncio.run(service._retrieve_narrative_chunks(intent, healthkit))
+
+    assert [chunk.chunk_id for chunk in selected] == ["protein-1"]
+
+
+def test_retrieve_drops_seafood_and_medical_chunks_when_not_requested() -> None:
+    result = {
+        "documents": [[
+            "Higher-protein diets of 1.2-1.6 g/kg/day improved fat loss and preserved lean mass during calorie restriction.",
+            "The experimental group replaced fats with Norwegian sardines canned in cod liver oil and other seafood sources.",
+            "Following the Dietary Guidelines can help prevent chronic disease. If you have chronic disease, talk with your health care professional.",
+        ]],
+        "metadatas": [[
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition"},
+            {"source_file": "Scientific_Foundations.md", "heading_path": "Chapter 5. Fats and Oils > Initial Recommendations to reduce saturated fat intake"},
+            {"source_file": "Dietary_Guidelines_For_Americans.md", "heading_path": "Adults"},
+        ]],
+        "distances": [[0.15, 0.14, 0.16]],
+        "ids": [[
+            "protein-1",
+            "seafood-fats-1",
+            "medical-guidance-1",
+        ]],
+    }
+    knowledge_base = KnowledgeBase(
+        chroma_client=StubChromaClient(result),  # type: ignore[arg-type]
+        collection_name="unused",
+        serving_rows=[],
+    )
+    service = NutritionRAGService(knowledge_base, ConfiguredStubOpenAIClient())  # type: ignore[arg-type]
+    intent = NutritionIntent(
+        primary_goal="fat_loss",
+        secondary_goals=["maintenance"],
+        dietary_restrictions=["no_beef", "preferably_no_seafood"],
+        special_flags=["low_sleep"],
+        medical_flags=[],
+        rag_query_hints=["visceral fat reduction nutrition", "high protein calorie control", "no beef no seafood meal planning"],
+    )
+    healthkit = HealthKitSnapshot(age=19)
 
     selected = asyncio.run(service._retrieve_narrative_chunks(intent, healthkit))
 

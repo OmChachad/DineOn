@@ -10,10 +10,52 @@ from pipeline.rag_ingest import KnowledgeBase
 
 MAX_QUERY_HINTS = 3
 RESULTS_PER_HINT = 3
-MAX_NARRATIVE_CHUNKS = 5
+MAX_NARRATIVE_CHUNKS = 4
 MIN_ACCEPTED_SCORE = 0.35
 
 GENERIC_HEADING_TERMS = {"background", "introduction", "overview"}
+SEAFOOD_TERMS = {
+    "seafood",
+    "fish",
+    "shellfish",
+    "salmon",
+    "sardines",
+    "sardine",
+    "anchovies",
+    "anchovy",
+    "trout",
+    "flounder",
+    "shrimp",
+    "crab",
+    "oyster",
+    "oysters",
+    "cod",
+    "tilapia",
+    "catfish",
+}
+MEDICAL_CONDITION_TERMS = {
+    "chronic disease",
+    "type 2 diabetes",
+    "diabetes",
+    "cardiovascular disease",
+    "kidney stones",
+    "kidney stone",
+    "health care professional",
+}
+FATS_TOPIC_TERMS = {
+    "fat",
+    "fats",
+    "oil",
+    "oils",
+    "cholesterol",
+    "saturated",
+    "unsaturated",
+    "omega",
+    "ldl",
+    "heart",
+    "cardio",
+    "lipid",
+}
 SPECIAL_POPULATION_PATTERNS = {
     "older_adult": ("older adults", "recommendation: older adults"),
     "young_adulthood": ("young adulthood", "recommendation: young adulthood"),
@@ -30,6 +72,9 @@ class RetrievalContext:
     exact_terms: set[str]
     requested_diet_patterns: set[str]
     requested_populations: set[str]
+    requested_topics: set[str]
+    explicit_exclusions: set[str]
+    has_medical_context: bool
     age: int | None
 
 
@@ -78,9 +123,11 @@ class NutritionRAGService:
             ids = result.get("ids", [[]])[0]
 
             for chunk_id, document, metadata, distance in zip(ids, documents, metadatas, distances, strict=True):
+                heading_path = str(metadata.get("heading_path", ""))
+                if self._should_exclude_chunk(heading_path, document, context):
+                    continue
                 overlap_bonus = self._keyword_overlap_score(document, context.exact_terms)
                 similarity = 1 / (1 + float(distance))
-                heading_path = str(metadata.get("heading_path", ""))
                 section_penalty = self._section_penalty(heading_path, context)
                 generic_penalty = self._generic_section_penalty(heading_path)
                 score = similarity + overlap_bonus + (0.05 if hint.casefold() in document.casefold() else 0)
@@ -145,6 +192,12 @@ class NutritionRAGService:
             if pattern in raw_terms
         }
         requested_populations: set[str] = set()
+        requested_topics = {term for term in FATS_TOPIC_TERMS if term in raw_terms}
+        explicit_exclusions: set[str] = set()
+        if "no_seafood" in raw_terms or "no seafood" in raw_terms or "avoid seafood" in raw_terms:
+            explicit_exclusions.add("seafood")
+        if "no_fish" in raw_terms or "no fish" in raw_terms:
+            explicit_exclusions.add("seafood")
         if "older adult" in raw_terms or "senior" in raw_terms:
             requested_populations.add("older_adult")
         if "young adult" in raw_terms:
@@ -162,21 +215,11 @@ class NutritionRAGService:
             exact_terms={term for term in re.findall(r"[a-zA-Z]{4,}", raw_terms)},
             requested_diet_patterns=requested_diet_patterns,
             requested_populations=requested_populations,
+            requested_topics=requested_topics,
+            explicit_exclusions=explicit_exclusions,
+            has_medical_context=bool(intent.medical_flags),
             age=healthkit.age,
         )
-
-    def _build_exact_term_set(self, intent: NutritionIntent) -> set[str]:
-        raw_terms = " ".join(
-            [
-                intent.primary_goal,
-                *intent.secondary_goals,
-                *intent.dietary_restrictions,
-                *intent.special_flags,
-                *intent.medical_flags,
-                *intent.rag_query_hints,
-            ]
-        )
-        return {term for term in re.findall(r"[a-zA-Z]{4,}", raw_terms.casefold())}
 
     def _keyword_overlap_score(self, document: str, exact_terms: set[str]) -> float:
         if not exact_terms:
@@ -184,6 +227,29 @@ class NutritionRAGService:
         words = set(re.findall(r"[a-zA-Z]{4,}", document.casefold()))
         overlap = len(words & exact_terms)
         return min(0.35, overlap * 0.05)
+
+    def _should_exclude_chunk(self, heading_path: str, document: str, context: RetrievalContext) -> bool:
+        heading = heading_path.casefold()
+        document_casefold = document.casefold()
+
+        if "seafood" in context.explicit_exclusions:
+            if any(term in heading or term in document_casefold for term in SEAFOOD_TERMS):
+                return True
+
+        if not context.has_medical_context:
+            if any(term in heading or term in document_casefold for term in MEDICAL_CONDITION_TERMS):
+                return True
+
+        if "chapter 5. fats and oils" in heading:
+            if not context.requested_topics:
+                return True
+            if any(token in heading for token in ("introduction", "initial recommendations", "diet-heart", "legacy")):
+                return True
+
+        if not context.requested_topics and any(token in heading for token in ("cardiovascular disease", "chronic disease")):
+            return True
+
+        return False
 
     def _section_penalty(self, heading_path: str, context: RetrievalContext) -> float:
         heading = heading_path.casefold()
@@ -205,6 +271,8 @@ class NutritionRAGService:
             penalty += 0.25
         if any(token in heading for token in SPECIAL_POPULATION_PATTERNS["testosterone_health"]) and "testosterone_health" not in context.requested_populations:
             penalty += 0.2
+        if "chapter 5. fats and oils" in heading and not context.requested_topics:
+            penalty += 0.3
 
         return penalty
 
