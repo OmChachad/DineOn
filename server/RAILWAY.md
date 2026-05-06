@@ -4,9 +4,9 @@ This backend is set up to deploy to Railway as a single FastAPI service from the
 
 ## What is already configured
 
-- Python is pinned to `3.13` in `.python-version`
+- Python is pinned to `3.12` in `.python-version`
+- `Dockerfile` provides a deterministic Railway build path using Poetry inside the container
 - `railway.toml` defines:
-  - the `RAILPACK` builder
   - the FastAPI start command
   - the `/health` healthcheck
   - a longer startup timeout to allow knowledge-base ingestion
@@ -22,6 +22,8 @@ This backend is set up to deploy to Railway as a single FastAPI service from the
 5. Add the required environment variable:
    - `OPENAI_API_KEY`
 6. Generate a public domain for the service from the Railway networking settings.
+
+Railway should detect the `Dockerfile` automatically from the `/server` root directory and build with that instead of the default Python builder.
 
 ## Important note about startup
 

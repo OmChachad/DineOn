@@ -1,5 +1,4 @@
 [build]
-builder = "RAILPACK"
 watchPatterns = ["/server/**", "/Contracts/**"]
 
 [deploy]
