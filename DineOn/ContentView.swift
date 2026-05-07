@@ -103,15 +103,6 @@ struct ContentView: View {
                 }
                 .padding(.horizontal, 20)
             }
-            .toolbar {
-                if let menu = fetcher.diningMenu {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        ShareLink(item: menu.exportForLLM(date: chosenDate)) {
-                            Label("Export to LLM", systemImage: "square.and.arrow.up")
-                        }
-                    }
-                }
-            }
             .navigationTitle("DineOn")
             .navigationBarTitleDisplayMode(.inline)
         }
