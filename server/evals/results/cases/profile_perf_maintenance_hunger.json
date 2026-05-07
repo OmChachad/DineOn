@@ -1,0 +1,75 @@
+{
+  "id": "profile_perf_maintenance_hunger",
+  "suite": "nutrition_profile_performance",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Maintenance scenario focused on satiety and eating pattern quality.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I'm trying to maintain my weight.",
+      "I want to eat cleaner.",
+      "I keep getting hungry late at night."
+    ],
+    "healthkit": {
+      "age": 20,
+      "sex": "female",
+      "resting_calories": 1520,
+      "active_calories_avg": 360,
+      "sleep_hrs_avg": 6.7
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:24.341853Z",
+    "daily_calories": 1900,
+    "protein_g": 100,
+    "carbs_g": 220,
+    "fat_g": 65,
+    "calorie_rationale": "TDEE is about 1880 kcal, so a 1900 kcal target fits weight maintenance. The serving rows for 1800–2000 kcal support a similar pattern, with protein around 3–4 servings/day and healthy fats around 4–4.5 servings/day.",
+    "meal_pattern": "Aim for 3 meals plus 1–2 planned snacks, with protein at each meal and a high-protein/fiber evening snack if late-night hunger hits. Build meals around whole foods and keep highly processed snack foods out of easy reach.",
+    "foods_to_prioritize": [
+      "Lean proteins",
+      "Eggs",
+      "Greek yogurt or full-fat dairy with no added sugar",
+      "Beans, lentils, tofu, and soy foods",
+      "Vegetables",
+      "Fruit",
+      "Whole grains",
+      "Nuts, seeds, olives, and avocado"
+    ],
+    "foods_to_avoid": [
+      "Chips",
+      "Cookies",
+      "Candy",
+      "Highly processed salty or sweet packaged foods",
+      "Sugary late-night snacks"
+    ],
+    "watch_nutrients": [
+      "Protein",
+      "Fiber",
+      "Saturated fat",
+      "Calcium",
+      "Iron",
+      "Vitamin B12",
+      "Zinc",
+      "Iodine"
+    ],
+    "sleep_note": "Average sleep is 6.7 hours, which may worsen appetite control and late-night hunger. Try to protect sleep timing and use a planned evening snack instead of grazing.",
+    "summary": "Your calorie target looks like maintenance at about 1900 kcal/day. A cleaner pattern with enough protein, fiber, and healthy fats should help with fullness and late-night hunger. Keep most meals home-prepared and include a protein-rich snack in the evening if needed. Short sleep may be making hunger feel stronger, so improving sleep could help too.",
+    "sources": [
+      "Daily Servings By Calorie Level - 1800 kcal",
+      "Daily Servings By Calorie Level - 2000 kcal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Background",
+      "Dietary_Guidelines_For_Americans.md - Incorporate Healthy Fats",
+      "Dietary_Guidelines_For_Americans.md - Consume Dairy",
+      "Scientific_Foundations.md - Chapter 3. Highly Processed Foods > Recommendation: Highly Processed Foods"
+    ],
+    "warnings": []
+  }
+}

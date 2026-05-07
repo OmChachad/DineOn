@@ -1,0 +1,73 @@
+{
+  "id": "profile_sparse_height_weight_only",
+  "suite": "nutrition_profile_sparse_healthkit",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Height and weight alone should not support the same confidence as a full activity profile.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I lift 5 times a week.",
+      "I want to gain muscle."
+    ],
+    "healthkit": {
+      "sex": "male",
+      "height_cm": 180,
+      "weight_kg": 88
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:34:04.899927Z",
+    "daily_calories": 3100,
+    "protein_g": 150,
+    "carbs_g": 390,
+    "fat_g": 90,
+    "calorie_rationale": "At 88 kg and lifting 5x/week, a modest calorie surplus is appropriate for muscle gain. Protein is set at about 1.7 g/kg, slightly above the 1.2–1.6 g/kg range cited for active lifters to support hypertrophy and recovery, while carbs are kept high to support training performance and glycogen needs.",
+    "meal_pattern": "3–5 meals per day with 25–40 g protein each, including a protein-forward meal or shake within a few hours after training. Spread carbs around workouts and keep meals consistent on training days.",
+    "foods_to_prioritize": [
+      "Lean meats",
+      "Eggs",
+      "Greek yogurt",
+      "Milk or fortified dairy",
+      "Chicken breast",
+      "Fish/seafood",
+      "Beef",
+      "Beans and lentils",
+      "Soy foods like tofu/tempeh",
+      "Nuts and seeds",
+      "Whole grains",
+      "Fruit and starchy carbs around workouts"
+    ],
+    "foods_to_avoid": [
+      "Deep-fried foods",
+      "Protein foods with lots of added sugar",
+      "Refined-carb-heavy meals with little protein",
+      "Ultra-processed add-on foods that crowd out nutrient-dense protein sources"
+    ],
+    "watch_nutrients": [
+      "Fiber",
+      "Magnesium",
+      "Folate",
+      "Iron",
+      "Zinc",
+      "Calcium",
+      "Iodine",
+      "Vitamin B12"
+    ],
+    "sleep_note": "Sleep matters for recovery and muscle gain; aim for consistent, sufficient sleep to support training adaptation and appetite regulation.",
+    "summary": "This profile supports a lean bulk for an active 88 kg male lifting 5 times per week. Protein is prioritized to support muscle growth and recovery, with enough carbs to fuel training and replenish glycogen. Meals should be protein-centered and spread through the day, with carbs clustered around workouts. Emphasize minimally processed protein foods and watch key micronutrients that support performance and recovery.",
+    "sources": [
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Dietary_Guidelines_For_Americans.md - Prioritize Protein Foods at Every Meal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Background"
+    ],
+    "warnings": [
+      "No structured serving rows were provided, so calorie target is an estimated surplus rather than a data-anchored prescription."
+    ]
+  }
+}

@@ -1,0 +1,77 @@
+{
+  "id": "profile_sparse_no_healthkit",
+  "suite": "nutrition_profile_sparse_healthkit",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Near-empty HealthKit payload to test graceful degradation and confidence handling.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I want to lose visceral fat.",
+      "I'm often tired.",
+      "I need easy high-protein options between classes."
+    ],
+    "healthkit": {}
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:48.067570Z",
+    "daily_calories": null,
+    "protein_g": null,
+    "carbs_g": null,
+    "fat_g": null,
+    "calorie_rationale": "No structured serving rows or body weight were provided, so a numeric calorie target can’t be anchored reliably. For visceral fat loss, use a modest calorie deficit while keeping protein high enough to preserve lean mass.",
+    "meal_pattern": "Eat protein at every meal and build easy portable snacks between classes. Favor 3 meals plus 1-2 high-protein snacks, with each snack centered on 20-30 g protein if possible.",
+    "foods_to_prioritize": [
+      "eggs",
+      "poultry",
+      "seafood",
+      "Greek yogurt",
+      "cottage cheese",
+      "beans",
+      "lentils",
+      "soy foods",
+      "nuts",
+      "seeds",
+      "olive oil",
+      "fruit",
+      "vegetables"
+    ],
+    "foods_to_avoid": [
+      "deep-fried foods",
+      "highly processed foods",
+      "refined grains",
+      "added sugars",
+      "sugar-heavy snacks",
+      "foods high in saturated fat"
+    ],
+    "watch_nutrients": [
+      "protein",
+      "fiber",
+      "saturated fat",
+      "iron",
+      "zinc",
+      "calcium",
+      "iodine",
+      "vitamin B12",
+      "magnesium",
+      "folate"
+    ],
+    "sleep_note": "If you’re often tired, prioritize regular meals with protein and fiber; blood-sugar swings from sugary, low-protein snacks can worsen energy crashes. If fatigue persists, consider checking sleep, hydration, and iron/B12 status.",
+    "summary": "Higher protein intake supports fat loss and helps preserve lean mass during calorie restriction. For visceral fat loss and better energy, keep meals simple: protein plus fiber-rich plants and healthy fats. Between classes, choose portable options like yogurt, eggs, edamame, tuna, jerky, nuts, or a protein shake. Limit fried and highly processed foods, and keep saturated fat modest.",
+    "sources": [
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Recommendations: Protein",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Dietary_Guidelines_For_Americans.md - Prioritize Protein Foods at Every Meal",
+      "Scientific_Foundations.md - Chapter 5. Fats and Oils > Recommendations: Healthy Fats"
+    ],
+    "warnings": [
+      "If you have unexplained fatigue, persistent low energy, or rapid weight changes, seek medical evaluation.",
+      "Protein targets are weight-dependent; without body weight, grams per day can only be estimated later."
+    ]
+  }
+}

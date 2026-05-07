@@ -1,0 +1,36 @@
+{
+  "id": "profile_boundary_impossible_age",
+  "suite": "nutrition_profile_boundary",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Impossible ages should be rejected as invalid input.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "help me eat better"
+    ],
+    "healthkit": {
+      "age": 140
+    }
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "less_than_equal",
+        "loc": [
+          "body",
+          "healthkit",
+          "age"
+        ],
+        "msg": "Input should be less than or equal to 130",
+        "input": 140,
+        "ctx": {
+          "le": 130
+        }
+      }
+    ]
+  }
+}

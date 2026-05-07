@@ -1,0 +1,73 @@
+{
+  "id": "profile_perf_low_sleep",
+  "suite": "nutrition_profile_performance",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Tests whether low-sleep context surfaces in the narrative guidance.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I usually sleep about 5 hours.",
+      "I keep craving snacks.",
+      "I want better energy and appetite control."
+    ],
+    "healthkit": {
+      "age": 19,
+      "sex": "male",
+      "resting_calories": 1720,
+      "active_calories_avg": 410,
+      "sleep_hrs_avg": 5.0
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:36.711507Z",
+    "daily_calories": 2150,
+    "protein_g": 140,
+    "carbs_g": 245,
+    "fat_g": 75,
+    "calorie_rationale": "Use ~2150 kcal as a practical midpoint between the 2000 and 2200 kcal serving rows and close to estimated TDEE (2130 kcal). For appetite control and steadier energy, keep meals balanced rather than low-calorie or snack-heavy.",
+    "meal_pattern": "3 meals + 1 planned snack daily; aim for protein + fiber at each meal, and make the snack protein-forward instead of sugary or salty packaged foods.",
+    "foods_to_prioritize": [
+      "lean meats, eggs, Greek yogurt, milk, tofu, soy foods, beans, lentils",
+      "vegetables at most meals",
+      "fruit 1-2 times per day",
+      "whole grains like oats, brown rice, whole-wheat bread, quinoa",
+      "nuts, seeds, avocado, olive oil",
+      "home-prepared meals and nutrient-dense snacks"
+    ],
+    "foods_to_avoid": [
+      "chips, cookies, candy",
+      "sugar-sweetened beverages, energy drinks, fruit drinks, soda",
+      "highly processed packaged snack foods",
+      "foods with lots of added sugar or artificial sweeteners"
+    ],
+    "watch_nutrients": [
+      "added sugars",
+      "fiber",
+      "protein",
+      "iron",
+      "calcium",
+      "magnesium",
+      "zinc",
+      "iodine"
+    ],
+    "sleep_note": "5 hours of sleep can increase hunger and snack cravings, so keep meal timing consistent and avoid relying on caffeine or sugary drinks for energy.",
+    "summary": "Your calorie target is about 2150 kcal, which matches your estimated energy needs and should support better energy without pushing intake too low. For appetite control, build meals around protein, whole grains, vegetables, fruit, and healthy fats, and plan one protein-rich snack. Limit sugary drinks and highly processed snacks, since they can worsen cravings. Improving sleep will likely help hunger and energy the most.",
+    "sources": [
+      "Daily Servings By Calorie Level - 2000 kcal",
+      "Daily Servings By Calorie Level - 2200 kcal",
+      "Dietary_Guidelines_For_Americans.md - Limit Highly Processed Foods, Added Sugars, & Refined Carbohydrates",
+      "Scientific_Foundations.md - Chapter 4. Carbohydrates > Recommendations: Added Sugars",
+      "Scientific_Foundations.md - Chapter 3. Highly Processed Foods > Recommendation: Highly Processed Foods",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods"
+    ],
+    "warnings": [
+      "Low sleep may independently increase appetite and snack cravings.",
+      "If using plant-forward protein, pay attention to vitamin B12, iron, zinc, iodine, and calcium."
+    ]
+  }
+}

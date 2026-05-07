@@ -1,0 +1,107 @@
+{
+  "id": "suggest_adv_aggressive_profile",
+  "suite": "suggestions_adversarial",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Tests whether a very aggressive nutrition profile can make the menu selector leave grounded, realistic choices.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Lunch",
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": [
+        "Turkey Chili"
+      ]
+    },
+    "nutrition_profile": {
+      "schema_version": 1,
+      "generated_at": "2026-05-06T20:15:00Z",
+      "daily_calories": 1200,
+      "protein_g": 155,
+      "carbs_g": 80,
+      "fat_g": 35,
+      "calorie_rationale": "Very aggressive fat-loss target.",
+      "meal_pattern": "3 meals",
+      "foods_to_prioritize": [
+        "lean protein",
+        "vegetables"
+      ],
+      "foods_to_avoid": [
+        "desserts"
+      ],
+      "watch_nutrients": [
+        "iron"
+      ],
+      "sleep_note": "Sleep matters.",
+      "summary": "Aggressive cut profile.",
+      "sources": [
+        "Scientific_Foundations.md"
+      ],
+      "warnings": [
+        "Aggressive target."
+      ]
+    },
+    "healthkit": {
+      "active_calories_today": 900
+    },
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Greek Yogurt Parfait\n  ITEM Scrambled Eggs\n  ITEM Hash Browns\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n  ITEM Grilled Chicken\nSTATION Salad\n  ITEM Lentil Salad\nVENUE Village\nMEAL Lunch\nSTATION Bowls\n  ITEM Chicken Burrito Bowl\n  ITEM Tofu Burrito Bowl\nMEAL Dinner\nSTATION Specials\n  ITEM Turkey Chili\n  ITEM Quinoa Pilaf\nVENUE Everybody's Kitchen\nMEAL Dinner\nSTATION Plant Forward\n  ITEM Tofu Stir Fry\n  ITEM Brown Rice\n  ITEM Steamed Broccoli\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:35:22.473796Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": 1200,
+    "active_calories_today": 900,
+    "meals": [
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Grilled Chicken",
+          "Roasted Vegetables",
+          "Lentil Salad"
+        ],
+        "estimated_calories": 450,
+        "estimated_protein_g": 45,
+        "estimated_carbs_g": 30,
+        "estimated_fat_g": 15,
+        "rationale": "High-protein, vegetable-forward lunch that fits the aggressive cut and keeps carbs moderate while leveraging a lean protein main.",
+        "optional_caution": null
+      },
+      {
+        "meal": "Dinner",
+        "meal_key": "Dinner",
+        "venue": "Everybody's Kitchen",
+        "items": [
+          "Tofu Stir Fry",
+          "Steamed Broccoli"
+        ],
+        "estimated_calories": 350,
+        "estimated_protein_g": 24,
+        "estimated_carbs_g": 25,
+        "estimated_fat_g": 14,
+        "rationale": "Light, balanced dinner with vegetables and a solid plant-protein option; good for staying within calories after an active day.",
+        "optional_caution": "If you need more protein, add Brown Rice only if portions are small."
+      }
+    ],
+    "summary": "This day leans lean and simple to support the aggressive cut: a high-protein lunch and a lighter vegetable-based dinner. I prioritized protein and vegetables while keeping calories controlled and avoiding desserts.",
+    "warnings": [
+      "Aggressive target."
+    ]
+  }
+}

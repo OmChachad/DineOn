@@ -1,0 +1,61 @@
+{
+  "id": "suggest_boundary_no_matching_slots",
+  "suite": "suggestions_boundary",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "No matching requested slots should degrade safely instead of inventing dinner options.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": []
+    },
+    "nutrition_profile": null,
+    "healthkit": {},
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Oatmeal\n  ITEM Greek Yogurt Parfait\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": false,
+  "failure_reasons": [
+    "Meal slot 'Dinner' was not present in the exported menu."
+  ],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:35:32.432705Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": null,
+    "meals": [
+      {
+        "meal": "Dinner",
+        "meal_key": "Dinner",
+        "venue": "Parkside",
+        "items": [
+          "Oatmeal",
+          "Greek Yogurt Parfait"
+        ],
+        "estimated_calories": 450,
+        "estimated_protein_g": 20,
+        "estimated_carbs_g": 60,
+        "estimated_fat_g": 12,
+        "rationale": "Only items listed in the export are available, so this is the best available balanced option for the day.",
+        "optional_caution": "Dinner menu is not shown in the export; this is a fallback from the available data."
+      }
+    ],
+    "summary": "The export only shows Parkside breakfast items, so I used the available food as a fallback. This gives you a simple, balanced meal with moderate protein and carbs.",
+    "warnings": [
+      "Dinner menu is missing from the provided export."
+    ]
+  }
+}

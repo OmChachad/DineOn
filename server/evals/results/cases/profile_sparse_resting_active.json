@@ -1,0 +1,71 @@
+{
+  "id": "profile_sparse_resting_active",
+  "suite": "nutrition_profile_sparse_healthkit",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Resting and active calories are enough for inferred TDEE, so this case should be stronger than the emptier profiles.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I want to lose weight without feeling exhausted.",
+      "Prefer vegetarian meals with more protein."
+    ],
+    "healthkit": {
+      "sex": "female",
+      "resting_calories": 1500,
+      "active_calories_avg": 250
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:59.375798Z",
+    "daily_calories": 1500,
+    "protein_g": 100,
+    "carbs_g": 165,
+    "fat_g": 50,
+    "calorie_rationale": "A 1500 kcal target is a modest deficit from the reported TDEE of 1750 kcal, which supports weight loss without being overly aggressive. The structured serving rows around 1400–1600 kcal suggest higher protein at this calorie level, and the narrative evidence supports protein intakes around 1.2–1.6 g/kg/day during calorie restriction for preserving lean mass and satiety.",
+    "meal_pattern": "Aim for 3 meals plus 1 protein-rich snack, with protein at every meal. Build each meal around tofu, tempeh, soy yogurt, beans/lentils, eggs if included, and pair with vegetables and a high-fiber whole grain; keep cooking methods baked, roasted, stir-fried, or grilled.",
+    "foods_to_prioritize": [
+      "Tofu and tempeh",
+      "Edamame and soy milk",
+      "Lentils, beans, chickpeas, and other legumes",
+      "Greek yogurt or cottage cheese if included in vegetarian pattern",
+      "Eggs if included",
+      "Nuts and seeds in measured portions",
+      "Vegetables and berries",
+      "Whole grains like oats, quinoa, brown rice, and whole-grain bread"
+    ],
+    "foods_to_avoid": [
+      "Deep-fried foods",
+      "Sugary drinks",
+      "Refined carbs used in place of protein",
+      "Large portions of calorie-dense snack foods",
+      "Ultra-processed vegetarian foods that are low in protein"
+    ],
+    "watch_nutrients": [
+      "Vitamin B12",
+      "Iron",
+      "Zinc",
+      "Iodine",
+      "Calcium",
+      "Fiber"
+    ],
+    "sleep_note": "Keep dinner balanced and not too light; enough protein and carbs can help avoid nighttime hunger and fatigue. If energy drops, shift more calories earlier in the day rather than cutting protein.",
+    "summary": "A 1500 kcal plan is a reasonable fat-loss target given your TDEE of 1750 kcal. To avoid feeling exhausted, keep protein relatively high and spread it across the day. Vegetarian protein sources like soy, legumes, dairy, eggs, nuts, and seeds should be the foundation of meals. Watch key nutrients that can run low in vegetarian diets, especially B12, iron, zinc, iodine, and calcium.",
+    "sources": [
+      "Daily Servings By Calorie Level - 1400 kcal",
+      "Daily Servings By Calorie Level - 1600 kcal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Dietary_Guidelines_For_Americans.md - Prioritize Protein Foods at Every Meal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Background"
+    ],
+    "warnings": [
+      "Protein target is an estimate; exact needs depend on body weight and activity.",
+      "If you follow a fully plant-exclusive diet, B12 supplementation or fortified foods is important."
+    ]
+  }
+}

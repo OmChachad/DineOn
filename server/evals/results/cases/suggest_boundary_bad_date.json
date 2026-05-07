@@ -1,0 +1,47 @@
+{
+  "id": "suggest_boundary_bad_date",
+  "suite": "suggestions_boundary",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Invalid date format should be rejected clearly.",
+  "request": {
+    "schema_version": 1,
+    "date": "05/06/2026",
+    "meal_slots": [
+      "Lunch"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": []
+    },
+    "nutrition_profile": null,
+    "healthkit": {},
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "value_error",
+        "loc": [
+          "body",
+          "date"
+        ],
+        "msg": "Value error, date must use YYYY-MM-DD format.",
+        "input": "05/06/2026",
+        "ctx": {
+          "error": {}
+        }
+      }
+    ]
+  }
+}

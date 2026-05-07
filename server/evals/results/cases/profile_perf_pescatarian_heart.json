@@ -1,0 +1,84 @@
+{
+  "id": "profile_perf_pescatarian_heart",
+  "suite": "nutrition_profile_performance",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Checks dietary-pattern interpretation and source grounding without a fully dense HealthKit profile.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I'm pescatarian.",
+      "I want meals that support heart health.",
+      "I want to lower saturated fat."
+    ],
+    "healthkit": {
+      "age": 28,
+      "sex": "female",
+      "resting_calories": 1490,
+      "active_calories_avg": 290,
+      "sleep_hrs_avg": 7.1
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:42.099473Z",
+    "daily_calories": 1800,
+    "protein_g": 95,
+    "carbs_g": 210,
+    "fat_g": 60,
+    "calorie_rationale": "Use the provided 1800 kcal serving row as the primary anchor, and it also matches your provisional target closely. With an active-calorie average around 290 kcal and a TDEE of 1780 kcal, 1800 kcal is a reasonable maintenance-oriented target for heart-healthy eating.",
+    "meal_pattern": "Aim for 3 meals with 1 snack, or 4 smaller meals. Build each meal around a protein, a whole grain or starchy plant food, and at least one vegetable, with nuts/seeds or olive oil in moderate amounts.",
+    "foods_to_prioritize": [
+      "salmon",
+      "sardines",
+      "anchovies",
+      "trout",
+      "Pacific oysters",
+      "tilapia",
+      "shrimp",
+      "catfish",
+      "crab",
+      "flounder",
+      "beans",
+      "lentils",
+      "soy foods",
+      "chia seeds",
+      "flaxseed",
+      "walnuts",
+      "whole grains",
+      "vegetables",
+      "fruit",
+      "olive oil",
+      "avocados"
+    ],
+    "foods_to_avoid": [
+      "high-saturated-fat foods",
+      "processed foods high in saturated fat",
+      "foods made with partially hydrogenated oils",
+      "refined grains and sugary foods eaten in place of whole foods"
+    ],
+    "watch_nutrients": [
+      "saturated fat",
+      "omega-3 EPA/DHA",
+      "fiber",
+      "vitamin D",
+      "calcium",
+      "potassium",
+      "choline",
+      "mercury exposure"
+    ],
+    "sleep_note": "Your average sleep of 7.1 hours is decent; keeping meals balanced and not too heavy late at night may help preserve sleep quality and appetite control.",
+    "summary": "An 1800 kcal pattern is a good fit for your current activity level and supports a heart-health focus. Prioritize omega-3-rich seafood, legumes, soy foods, whole grains, vegetables, fruit, and unsaturated fats like olive oil, walnuts, chia, and flax. Keep saturated fat below 10% of calories by limiting highly processed foods and choosing lower-saturated-fat pescatarian meals. Watch mercury by favoring salmon, sardines, anchovies, and trout more often.",
+    "sources": [
+      "Daily Servings By Calorie Level - 1800 kcal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Animal-Source Protein Foods",
+      "Scientific_Foundations.md - Chapter 5. Fats and Oils > Recommendations: Healthy Fats",
+      "Scientific_Foundations.md - Chapter 5. Fats and Oils > Evaluating the Evidence for Saturated-Fat Reduction and Replacement",
+      "Scientific_Foundations.md - Chapter 5. Fats and Oils > Omega-3 Fatty Acids"
+    ],
+    "warnings": []
+  }
+}

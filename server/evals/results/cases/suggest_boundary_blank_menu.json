@@ -1,0 +1,47 @@
+{
+  "id": "suggest_boundary_blank_menu",
+  "suite": "suggestions_boundary",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Blank exported menu should be rejected as an invalid request.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Lunch"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": []
+    },
+    "nutrition_profile": null,
+    "healthkit": {},
+    "menu_export": "   ",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "value_error",
+        "loc": [
+          "body",
+          "menu_export"
+        ],
+        "msg": "Value error, menu_export is required.",
+        "input": "   ",
+        "ctx": {
+          "error": {}
+        }
+      }
+    ]
+  }
+}

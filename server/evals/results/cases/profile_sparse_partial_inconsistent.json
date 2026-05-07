@@ -1,0 +1,70 @@
+{
+  "id": "profile_sparse_partial_inconsistent",
+  "suite": "nutrition_profile_sparse_healthkit",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Partial profile with sleep but little metabolic data to test conservative behavior.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I'm trying to maintain my weight.",
+      "I want better energy and appetite control."
+    ],
+    "healthkit": {
+      "sex": "male",
+      "weight_kg": 92,
+      "sleep_hrs_avg": 5.4
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:34:10.871220Z",
+    "daily_calories": 2900,
+    "protein_g": 165,
+    "carbs_g": 360,
+    "fat_g": 95,
+    "calorie_rationale": "A 92 kg male aiming to maintain weight with low sleep and energy/appetite concerns likely needs a moderate-to-high intake; 2900 kcal is a practical starting point and should be adjusted by weekly weight trend and hunger/energy. Higher protein and fiber-rich foods can help satiety and steady energy without pushing calories too low.",
+    "meal_pattern": "3 meals + 1-2 planned snacks; include protein at each meal and avoid long gaps between eating. Put most carbs around breakfast, lunch, and post-activity meals, and keep snacks balanced (protein + fiber + fat).",
+    "foods_to_prioritize": [
+      "Legumes, lentils, beans, chickpeas",
+      "Soy foods (tofu, edamame, soy milk)",
+      "Nuts and seeds",
+      "Whole grains (oats, brown rice, whole-grain bread)",
+      "Intact fruits and vegetables",
+      "Dairy or fortified alternatives",
+      "Iron-rich foods"
+    ],
+    "foods_to_avoid": [
+      "Sugar-sweetened beverages",
+      "Energy drinks",
+      "Candy, cookies, chips",
+      "Refined grains and refined potatoes as routine staples",
+      "Highly processed packaged snack foods",
+      "Foods with heavy added sugars"
+    ],
+    "watch_nutrients": [
+      "Fiber",
+      "Protein",
+      "Magnesium",
+      "Folate",
+      "Iron",
+      "Zinc",
+      "Iodine",
+      "Calcium"
+    ],
+    "sleep_note": "With average sleep around 5.4 hours, appetite and energy regulation may be less stable; prioritize regular meals, hydration, and earlier-day caffeine cutoff if used.",
+    "summary": "Use a steady meal pattern with protein at each meal to support maintenance, energy, and appetite control. Emphasize minimally processed carbs, legumes, soy, nuts, seeds, fruits, vegetables, and whole grains, while limiting sugary drinks and highly processed snacks. If you eat mostly plant-based, pay extra attention to iron, zinc, iodine, calcium, and B12. With short sleep, consistent meals and balanced snacks may help reduce energy crashes and overeating.",
+    "sources": [
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Dietary_Guidelines_For_Americans.md - Limit Highly Processed Foods, Added Sugars, & Refined Carbohydrates",
+      "Scientific_Foundations.md - Chapter 4. Carbohydrates > Evidence",
+      "Scientific_Foundations.md - Chapter 4. Carbohydrates > Recommendations: Added Sugars",
+      "Dietary_Guidelines_For_Americans.md - Adolescence (11–18 Years)",
+      "Scientific_Foundations.md - Chapter 3. Highly Processed Foods > Recommendation: Highly Processed Foods"
+    ],
+    "warnings": []
+  }
+}

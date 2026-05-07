@@ -1,0 +1,82 @@
+{
+  "id": "suggest_perf_without_profile",
+  "suite": "suggestions_performance",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "No profile case to verify the endpoint can still produce reasonable, grounded suggestions.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Breakfast",
+      "Lunch"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": true,
+      "selected_allergens": [
+        "shellfish"
+      ],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [
+        "shrimp"
+      ],
+      "favorite_dishes": []
+    },
+    "nutrition_profile": null,
+    "healthkit": {
+      "active_calories_today": 150
+    },
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Greek Yogurt Parfait\n  ITEM Scrambled Eggs\n  ITEM Hash Browns\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n  ITEM Grilled Chicken\nSTATION Salad\n  ITEM Lentil Salad\nVENUE Village\nMEAL Lunch\nSTATION Bowls\n  ITEM Chicken Burrito Bowl\n  ITEM Tofu Burrito Bowl\nMEAL Dinner\nSTATION Specials\n  ITEM Turkey Chili\n  ITEM Quinoa Pilaf\nVENUE Everybody's Kitchen\nMEAL Dinner\nSTATION Plant Forward\n  ITEM Tofu Stir Fry\n  ITEM Brown Rice\n  ITEM Steamed Broccoli\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:34:59.290501Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": 150,
+    "meals": [
+      {
+        "meal": "Breakfast",
+        "meal_key": "Breakfast",
+        "venue": "Parkside",
+        "items": [
+          "Scrambled Eggs",
+          "Greek Yogurt Parfait"
+        ],
+        "estimated_calories": 430,
+        "estimated_protein_g": 30,
+        "estimated_carbs_g": 28,
+        "estimated_fat_g": 18,
+        "rationale": "High-protein breakfast with solid balance and no shellfish risk.",
+        "optional_caution": null
+      },
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Grilled Chicken",
+          "Roasted Vegetables",
+          "Lentil Salad"
+        ],
+        "estimated_calories": 560,
+        "estimated_protein_g": 45,
+        "estimated_carbs_g": 35,
+        "estimated_fat_g": 22,
+        "rationale": "Lean protein plus fiber-rich sides for a balanced lunch that fits well after active calories today.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "This plan leans high-protein and balanced for the day, with simple plates that should be easy to find at Parkside. It avoids shellfish and shrimp while keeping calories moderate.",
+    "warnings": [
+      "Check Lentil Salad for shared prep if you want to be extra cautious about allergens."
+    ]
+  }
+}

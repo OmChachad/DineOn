@@ -1,0 +1,80 @@
+{
+  "id": "profile_sparse_only_sex",
+  "suite": "nutrition_profile_sparse_healthkit",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Only sex is present, so the model should avoid pretending it has a strong calorie estimate.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I want to eat in a way that supports blood sugar control.",
+      "I need steady energy between classes."
+    ],
+    "healthkit": {
+      "sex": "female"
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:53.351513Z",
+    "daily_calories": null,
+    "protein_g": null,
+    "carbs_g": null,
+    "fat_g": null,
+    "calorie_rationale": "No specific calorie target or serving rows were provided, so a numeric calorie band cannot be anchored reliably from the supplied evidence. The guidance below emphasizes balanced meals with protein, fiber-rich whole grains, minimally processed carbs, and healthy fats to support blood sugar control and steady between-class energy.",
+    "meal_pattern": "Aim for regular meals and planned snacks built around protein + fiber-rich carbs + healthy fats. Keep carbs mostly from intact fruits, vegetables, legumes, and whole grains, and avoid long gaps without eating.",
+    "foods_to_prioritize": [
+      "beans",
+      "lentils",
+      "legumes",
+      "soy foods",
+      "nuts",
+      "seeds",
+      "eggs",
+      "poultry",
+      "seafood",
+      "vegetables",
+      "fruits",
+      "whole grains",
+      "healthy fats",
+      "dairy"
+    ],
+    "foods_to_avoid": [
+      "refined grains",
+      "white bread",
+      "packaged breakfast foods",
+      "crackers",
+      "chips",
+      "cookies",
+      "candy",
+      "added sugars",
+      "sweet drinks",
+      "highly processed salty or sweet packaged foods"
+    ],
+    "watch_nutrients": [
+      "fiber",
+      "protein",
+      "magnesium",
+      "folate",
+      "added sugars",
+      "sodium"
+    ],
+    "sleep_note": "Avoid caffeinated beverages, especially later in the day, since they can work against steady energy and sleep quality.",
+    "summary": "For blood sugar support, build meals around protein, fiber-rich whole grains, vegetables, fruit, and healthy fats. Choose minimally processed carbs more often and limit refined grains, added sugars, and packaged snack foods. Plant proteins like beans, lentils, nuts, seeds, and soy can help with insulin sensitivity and steady energy. Keep caffeine low or avoid it.",
+    "sources": [
+      "Dietary_Guidelines_For_Americans.md - Middle Childhood (5–10 Years)",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Recommendations: Protein",
+      "Dietary_Guidelines_For_Americans.md - Focus on Whole Grains",
+      "Scientific_Foundations.md - Chapter 3. Highly Processed Foods > Recommendation: Highly Processed Foods",
+      "Scientific_Foundations.md - Chapter 4. Carbohydrates > Evidence"
+    ],
+    "warnings": [
+      "No serving rows were provided, so calorie and macro targets are not individualized.",
+      "The evidence includes a middle-childhood guideline, which may not match the user's age; it was used only for general food-pattern themes."
+    ]
+  }
+}

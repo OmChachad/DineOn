@@ -1,0 +1,34 @@
+{
+  "id": "profile_boundary_empty_notes",
+  "suite": "nutrition_profile_boundary",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Invalid empty-note request should fail cleanly.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [],
+    "healthkit": {}
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "value_error",
+        "loc": [
+          "body"
+        ],
+        "msg": "Value error, At least one non-empty preference note is required.",
+        "input": {
+          "schema_version": 1,
+          "preference_notes": [],
+          "healthkit": {}
+        },
+        "ctx": {
+          "error": {}
+        }
+      }
+    ]
+  }
+}

@@ -1,0 +1,88 @@
+{
+  "id": "profile_perf_weight_loss_vegetarian",
+  "suite": "nutrition_profile_performance",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Baseline realistic fat-loss case with enough HealthKit context to support a numeric target.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I want to lose weight without feeling exhausted.",
+      "Prefer vegetarian meals with more protein."
+    ],
+    "healthkit": {
+      "age": 34,
+      "sex": "female",
+      "height_cm": 165,
+      "weight_kg": 78,
+      "bmi": 28.7,
+      "resting_calories": 1580,
+      "active_calories_avg": 320,
+      "tdee": 1900,
+      "steps_daily_avg": 4200,
+      "exercise_sessions_per_week": 1,
+      "sleep_hrs_avg": 6.1,
+      "resting_hr_avg": 74,
+      "weight_trend_30d_kg": 1.2
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:19.454155Z",
+    "daily_calories": 1650,
+    "protein_g": 120,
+    "carbs_g": 180,
+    "fat_g": 55,
+    "calorie_rationale": "TDEE is about 1900 kcal, so 1650 kcal is a moderate deficit that should support weight loss without being too aggressive, especially with low activity and low sleep. Serving guidance around 1600-1800 kcal supports a similar pattern, with emphasis on protein, vegetables, and controlled grains/fats.",
+    "meal_pattern": "Aim for 3 meals with a protein source at each meal, plus 1 high-protein snack if needed. Keep each meal balanced: protein + vegetables/fruit + a modest portion of whole grains and healthy fats.",
+    "foods_to_prioritize": [
+      "tofu",
+      "tempeh",
+      "soy milk",
+      "edamame",
+      "lentils",
+      "beans",
+      "Greek yogurt",
+      "cottage cheese",
+      "eggs",
+      "seitan",
+      "nuts and seeds",
+      "vegetables",
+      "berries",
+      "whole grains"
+    ],
+    "foods_to_avoid": [
+      "deep-fried foods",
+      "sugary drinks",
+      "refined carbs as main meal base",
+      "large portions of added-sugar desserts",
+      "heavy alcohol intake"
+    ],
+    "watch_nutrients": [
+      "vitamin B12",
+      "iron",
+      "zinc",
+      "iodine",
+      "calcium",
+      "magnesium",
+      "folate",
+      "fiber"
+    ],
+    "sleep_note": "With average sleep at 6.1 hours, keep the deficit moderate and avoid skipping meals; under-sleeping can make hunger and fatigue worse. Prioritize protein and regular meal timing to support energy.",
+    "summary": "A 1650 kcal target is a reasonable weight-loss range for your current activity level and should be easier to sustain than a more aggressive cut. Aim for about 120 g protein per day, mostly from vegetarian sources like soy, legumes, dairy, eggs, and seitan, to support fullness and muscle retention. Build meals around protein, vegetables, and moderate whole grains, and keep fried or sugary foods limited. Because you sleep about 6 hours on average, focus on steady eating patterns and adequate micronutrients to avoid feeling drained.",
+    "sources": [
+      "Daily Servings By Calorie Level - 1600 kcal",
+      "Daily Servings By Calorie Level - 1800 kcal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Recommendations: Protein",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Plant-Source Protein Foods",
+      "Dietary_Guidelines_For_Americans.md - Prioritize Protein Foods at Every Meal",
+      "Dietary_Guidelines_For_Americans.md - Consume Dairy",
+      "Scientific_Foundations.md - Chapter 4. Carbohydrates > Recommendations: Vegetables and Fruits"
+    ],
+    "warnings": []
+  }
+}

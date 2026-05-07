@@ -1,0 +1,63 @@
+{
+  "id": "suggest_perf_sparse_menu",
+  "suite": "suggestions_performance",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Sparse menu case to ensure the selector remains grounded when choice is limited.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Lunch"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": true,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [
+        "vegetarian"
+      ],
+      "excluded_keywords": [],
+      "favorite_dishes": [
+        "Pesto Pasta"
+      ]
+    },
+    "nutrition_profile": null,
+    "healthkit": {
+      "active_calories_today": 320
+    },
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:35:05.384060Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": 320,
+    "meals": [
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Pesto Pasta",
+          "Roasted Vegetables"
+        ],
+        "estimated_calories": 650,
+        "estimated_protein_g": 18,
+        "estimated_carbs_g": 78,
+        "estimated_fat_g": 28,
+        "rationale": "Best fit for a vegetarian lunch and it includes the favorite dish. Adding roasted vegetables improves balance and keeps the meal simple and realistic.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "For lunch, go with Pesto Pasta and Roasted Vegetables at Parkside. It matches your vegetarian preference, uses your favorite dish, and gives you a balanced meal without overcomplicating it.",
+    "warnings": []
+  }
+}

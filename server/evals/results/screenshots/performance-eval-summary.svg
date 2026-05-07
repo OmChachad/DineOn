@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1180" height="202" viewBox="0 0 1180 202">
+  <rect width="1180" height="202" fill="#111827"/>
+  <rect x="18" y="18" width="1144" height="166" rx="16" fill="#0b1220" stroke="#334155"/>
+  <text x="36" y="56" fill="#f9fafb" font-size="28" font-family="Menlo, Monaco, monospace">Performance Eval Summary</text>
+  <text x="36" y="90" fill="#e5e7eb" font-size="20" font-family="Menlo, Monaco, monospace">nutrition_profile_performance: 5/5 passed (100.0%)</text>
+<text x="36" y="118" fill="#e5e7eb" font-size="20" font-family="Menlo, Monaco, monospace">nutrition_profile_sparse_healthkit: 5/5 passed (100.0%)</text>
+<text x="36" y="146" fill="#e5e7eb" font-size="20" font-family="Menlo, Monaco, monospace">suggestions_performance: 4/5 passed (80.0%)</text>
+<text x="36" y="174" fill="#e5e7eb" font-size="20" font-family="Menlo, Monaco, monospace">suggestions_sparse_healthkit: 4/4 passed (100.0%)</text>
+</svg>

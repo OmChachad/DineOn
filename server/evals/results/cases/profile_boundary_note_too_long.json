@@ -1,0 +1,35 @@
+{
+  "id": "profile_boundary_note_too_long",
+  "suite": "nutrition_profile_boundary",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Overlong note should be rejected by request validation.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    ],
+    "healthkit": {}
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "value_error",
+        "loc": [
+          "body",
+          "preference_notes"
+        ],
+        "msg": "Value error, Each preference note must be 150 characters or fewer.",
+        "input": [
+          "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+        ],
+        "ctx": {
+          "error": {}
+        }
+      }
+    ]
+  }
+}

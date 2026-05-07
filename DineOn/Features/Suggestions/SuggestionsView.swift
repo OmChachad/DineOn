@@ -93,9 +93,9 @@ struct SuggestionsView: View {
     private var contentSection: some View {
         if case .failed(let message) = viewModel.state, viewModel.visibleSuggestions.isEmpty {
             messageCard(title: "Couldn’t Load Suggestions", message: message, systemImage: "wifi.slash")
-        } else if case .empty(let message) = viewModel.state, viewModel.visibleSuggestions.isEmpty {
-            messageCard(title: "No Suggestions Yet", message: message, systemImage: "fork.knife.circle")
-        } else if viewModel.visibleSuggestions.isEmpty {
+        } else if let emptyMessage = viewModel.emptyStateMessage {
+            messageCard(title: "No Suggestions Yet", message: emptyMessage, systemImage: "fork.knife.circle")
+        } else if viewModel.shouldShowLoadingCard {
             loadingCard
         } else {
             VStack(alignment: .leading, spacing: 14) {

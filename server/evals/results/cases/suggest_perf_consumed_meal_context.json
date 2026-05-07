@@ -1,0 +1,99 @@
+{
+  "id": "suggest_perf_consumed_meal_context",
+  "suite": "suggestions_performance",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Checks whether consumed-meal context is reflected in warnings or planning behavior.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Breakfast",
+      "Lunch",
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": [
+        "Greek Yogurt Parfait"
+      ]
+    },
+    "nutrition_profile": null,
+    "healthkit": {
+      "active_calories_today": 200
+    },
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Greek Yogurt Parfait\n  ITEM Scrambled Eggs\n  ITEM Hash Browns\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n  ITEM Grilled Chicken\nSTATION Salad\n  ITEM Lentil Salad\nVENUE Village\nMEAL Lunch\nSTATION Bowls\n  ITEM Chicken Burrito Bowl\n  ITEM Tofu Burrito Bowl\nMEAL Dinner\nSTATION Specials\n  ITEM Turkey Chili\n  ITEM Quinoa Pilaf\nVENUE Everybody's Kitchen\nMEAL Dinner\nSTATION Plant Forward\n  ITEM Tofu Stir Fry\n  ITEM Brown Rice\n  ITEM Steamed Broccoli\n",
+    "client_context": {
+      "consumed_meal_keys": [
+        "Breakfast"
+      ]
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": false,
+  "failure_reasons": [
+    "Suggestion recommended already-consumed meal slot 'Breakfast'."
+  ],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:35:01.801418Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": 200,
+    "meals": [
+      {
+        "meal": "Breakfast",
+        "meal_key": "Breakfast",
+        "venue": "Parkside",
+        "items": [
+          "Greek Yogurt Parfait",
+          "Scrambled Eggs"
+        ],
+        "estimated_calories": 420,
+        "estimated_protein_g": 28,
+        "estimated_carbs_g": 38,
+        "estimated_fat_g": 14,
+        "rationale": "Uses your favorite dish and adds protein for a balanced breakfast.",
+        "optional_caution": null
+      },
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Grilled Chicken",
+          "Roasted Vegetables",
+          "Lentil Salad"
+        ],
+        "estimated_calories": 560,
+        "estimated_protein_g": 45,
+        "estimated_carbs_g": 38,
+        "estimated_fat_g": 20,
+        "rationale": "High-protein, balanced lunch with fiber and vegetables.",
+        "optional_caution": null
+      },
+      {
+        "meal": "Dinner",
+        "meal_key": "Dinner",
+        "venue": "Everybody's Kitchen",
+        "items": [
+          "Tofu Stir Fry",
+          "Brown Rice",
+          "Steamed Broccoli"
+        ],
+        "estimated_calories": 620,
+        "estimated_protein_g": 26,
+        "estimated_carbs_g": 74,
+        "estimated_fat_g": 18,
+        "rationale": "A solid dinner with protein, carbs, and vegetables to round out the day.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "A balanced day centered on your favorite Greek Yogurt Parfait, then higher-protein lunch and a lighter plant-forward dinner. This should fit well without being overly heavy.",
+    "warnings": []
+  }
+}

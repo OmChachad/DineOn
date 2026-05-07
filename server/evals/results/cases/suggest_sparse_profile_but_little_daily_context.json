@@ -1,0 +1,105 @@
+{
+  "id": "suggest_sparse_profile_but_little_daily_context",
+  "suite": "suggestions_sparse_healthkit",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Attached profile with almost no real-time context should still stay grounded to the visible menu.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Lunch",
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": false,
+      "selected_allergens": [],
+      "selected_dietary_preferences": [],
+      "excluded_keywords": [],
+      "favorite_dishes": [
+        "Tofu Stir Fry"
+      ]
+    },
+    "nutrition_profile": {
+      "schema_version": 1,
+      "generated_at": "2026-05-06T20:15:00Z",
+      "daily_calories": 1950,
+      "protein_g": 120,
+      "carbs_g": 215,
+      "fat_g": 65,
+      "calorie_rationale": "Moderate target for fat loss while preserving energy.",
+      "meal_pattern": "3 meals and 1 snack",
+      "foods_to_prioritize": [
+        "Greek yogurt",
+        "tofu",
+        "lentils",
+        "broccoli"
+      ],
+      "foods_to_avoid": [
+        "sugar-sweetened beverages"
+      ],
+      "watch_nutrients": [
+        "fiber"
+      ],
+      "sleep_note": "Aim for more consistent sleep.",
+      "summary": "Balanced profile for steady progress.",
+      "sources": [
+        "Scientific_Foundations.md",
+        "Daily_Servings_By_Calorie_Level.md"
+      ],
+      "warnings": []
+    },
+    "healthkit": {},
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Greek Yogurt Parfait\n  ITEM Scrambled Eggs\n  ITEM Hash Browns\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n  ITEM Grilled Chicken\nSTATION Salad\n  ITEM Lentil Salad\nVENUE Village\nMEAL Lunch\nSTATION Bowls\n  ITEM Chicken Burrito Bowl\n  ITEM Tofu Burrito Bowl\nMEAL Dinner\nSTATION Specials\n  ITEM Turkey Chili\n  ITEM Quinoa Pilaf\nVENUE Everybody's Kitchen\nMEAL Dinner\nSTATION Plant Forward\n  ITEM Tofu Stir Fry\n  ITEM Brown Rice\n  ITEM Steamed Broccoli\n",
+    "client_context": {
+      "consumed_meal_keys": []
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:35:14.120807Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": 1950,
+    "active_calories_today": null,
+    "meals": [
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Grilled Chicken",
+          "Lentil Salad",
+          "Roasted Vegetables"
+        ],
+        "estimated_calories": 520,
+        "estimated_protein_g": 48,
+        "estimated_carbs_g": 34,
+        "estimated_fat_g": 18,
+        "rationale": "Strong protein base with lentils and vegetables to support your calorie target and fiber goal.",
+        "optional_caution": null
+      },
+      {
+        "meal": "Dinner",
+        "meal_key": "Dinner",
+        "venue": "Everybody's Kitchen",
+        "items": [
+          "Tofu Stir Fry",
+          "Steamed Broccoli",
+          "Brown Rice"
+        ],
+        "estimated_calories": 640,
+        "estimated_protein_g": 28,
+        "estimated_carbs_g": 78,
+        "estimated_fat_g": 20,
+        "rationale": "Matches your favorite dish and prioritizes tofu plus broccoli for a balanced, high-fiber dinner.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "This plan leans high in protein and fiber while staying reasonable for your calorie target. Lunch is a lean, balanced plate, and dinner uses your favorite tofu stir fry with broccoli and rice for a solid recovery meal.",
+    "warnings": []
+  }
+}

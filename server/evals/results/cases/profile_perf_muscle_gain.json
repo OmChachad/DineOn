@@ -1,0 +1,77 @@
+{
+  "id": "profile_perf_muscle_gain",
+  "suite": "nutrition_profile_performance",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Higher-activity muscle-gain case to verify the parser does not default to a fat-loss framing.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "I lift 5 times a week.",
+      "I want to gain muscle.",
+      "I do not want to gain too much fat."
+    ],
+    "healthkit": {
+      "age": 21,
+      "sex": "male",
+      "height_cm": 182,
+      "weight_kg": 81,
+      "resting_calories": 1850,
+      "active_calories_avg": 780,
+      "tdee": 2630,
+      "steps_daily_avg": 11000,
+      "exercise_sessions_per_week": 5,
+      "sleep_hrs_avg": 7.2
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:33:30.619632Z",
+    "daily_calories": 2900,
+    "protein_g": 180,
+    "carbs_g": 360,
+    "fat_g": 85,
+    "calorie_rationale": "TDEE is about 2630 kcal, so 2900 kcal is a modest surplus (~10%) that supports lean mass gain while limiting fat gain. The serving rows for 2800–3000 kcal point to roughly 4–5 protein servings, 3 dairy servings, 4.25–4.75 vegetable servings, 2.5 fruit servings, 3.25–6.5 whole-grain servings, and 6–7 healthy-fat servings, which fits a controlled bulk.",
+    "meal_pattern": "Eat 4–5 meals/day with protein at each meal; include carbs around lifting sessions and a protein-rich meal within a few hours after training. Keep portions steady week to week and adjust calories by 100–150 kcal based on scale trend and gym performance.",
+    "foods_to_prioritize": [
+      "Chicken, turkey, lean beef, eggs, Greek yogurt, milk, cottage cheese",
+      "Fish and seafood",
+      "Beans, lentils, tofu, soy foods",
+      "Oats, rice, potatoes, whole-grain bread, pasta",
+      "Fruit and vegetables at most meals",
+      "Nuts, seeds, avocado, olive oil"
+    ],
+    "foods_to_avoid": [
+      "Frequent deep-fried foods",
+      "Protein foods with lots of added sugar or refined starches",
+      "Large calorie surpluses beyond a modest bulk",
+      "Ultra-processed snack-heavy meals that displace protein"
+    ],
+    "watch_nutrients": [
+      "Protein: aim for 1.2–1.6 g/kg/day; around 180 g is a practical target at 81 kg",
+      "Fiber",
+      "Calcium",
+      "Potassium",
+      "Magnesium",
+      "Iron",
+      "Vitamin D",
+      "Omega-3 fats"
+    ],
+    "sleep_note": "7.2 hours is decent, but pushing closer to 7.5–9 hours may help recovery, training output, and appetite control during a lean bulk.",
+    "summary": "A 2900 kcal target is a sensible lean-bulk starting point for your activity level and TDEE. Aim for high protein spread across 4–5 meals, with carbs supporting training and fats kept moderate. Build meals around lean protein, whole grains, fruit, vegetables, and healthy fats to gain muscle with minimal fat. Track body weight and gym performance, then adjust calories slowly if gains are too fast or too slow.",
+    "sources": [
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Effect of Protein Intake of 1.2 to 1.6 g/kg/day on Body Composition",
+      "Dietary_Guidelines_For_Americans.md - Prioritize Protein Foods at Every Meal",
+      "Scientific_Foundations.md - Chapter 6. Dietary Protein > Background",
+      "Daily Servings By Calorie Level - 2800 kcal",
+      "Daily Servings By Calorie Level - 3000 kcal"
+    ],
+    "warnings": [
+      "This is a general nutrition profile, not medical advice.",
+      "If body fat is rising quickly, reduce calories by 100–150 kcal/day."
+    ]
+  }
+}

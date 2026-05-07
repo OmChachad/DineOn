@@ -1,0 +1,87 @@
+{
+  "id": "suggest_perf_vegetarian_dairy_free",
+  "suite": "suggestions_performance",
+  "endpoint": "/nutrition/suggestions",
+  "report_note": "Baseline grounded suggestion case with dietary restrictions and a favorite dish.",
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Lunch",
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": true,
+      "selected_allergens": [
+        "dairy"
+      ],
+      "selected_dietary_preferences": [
+        "vegetarian"
+      ],
+      "excluded_keywords": [],
+      "favorite_dishes": [
+        "Pesto Pasta"
+      ]
+    },
+    "nutrition_profile": null,
+    "healthkit": {
+      "active_calories_today": 420,
+      "steps_daily_avg": 8400
+    },
+    "menu_export": "DATE 2026-05-06\nVENUE Parkside\nMEAL Breakfast\nSTATION Entrees\n  ITEM Greek Yogurt Parfait\n  ITEM Scrambled Eggs\n  ITEM Hash Browns\nMEAL Lunch\nSTATION Entrees\n  ITEM Pesto Pasta\n  ITEM Roasted Vegetables\n  ITEM Grilled Chicken\nSTATION Salad\n  ITEM Lentil Salad\nVENUE Village\nMEAL Lunch\nSTATION Bowls\n  ITEM Chicken Burrito Bowl\n  ITEM Tofu Burrito Bowl\nMEAL Dinner\nSTATION Specials\n  ITEM Turkey Chili\n  ITEM Quinoa Pilaf\nVENUE Everybody's Kitchen\nMEAL Dinner\nSTATION Plant Forward\n  ITEM Tofu Stir Fry\n  ITEM Brown Rice\n  ITEM Steamed Broccoli\n",
+    "client_context": {
+      "consumed_meal_keys": [
+        "Breakfast"
+      ]
+    }
+  },
+  "expected_status": 200,
+  "status_code": 200,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-07T01:34:54.359580Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": 420,
+    "meals": [
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Pesto Pasta",
+          "Roasted Vegetables"
+        ],
+        "estimated_calories": 620,
+        "estimated_protein_g": 18,
+        "estimated_carbs_g": 78,
+        "estimated_fat_g": 24,
+        "rationale": "Best fit for your vegetarian preference and favorite dish; adding roasted vegetables makes the plate more balanced.",
+        "optional_caution": "Pesto Pasta may contain dairy."
+      },
+      {
+        "meal": "Dinner",
+        "meal_key": "Dinner",
+        "venue": "Everybody's Kitchen",
+        "items": [
+          "Tofu Stir Fry",
+          "Brown Rice",
+          "Steamed Broccoli"
+        ],
+        "estimated_calories": 540,
+        "estimated_protein_g": 24,
+        "estimated_carbs_g": 62,
+        "estimated_fat_g": 18,
+        "rationale": "A solid dairy-free vegetarian dinner with good protein and a balanced carb/veg mix.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "Lunch centers on your favorite Pesto Pasta with vegetables for balance. Dinner is a straightforward vegetarian, dairy-free plate with tofu, rice, and broccoli.",
+    "warnings": [
+      "Pesto Pasta may contain dairy."
+    ]
+  }
+}

@@ -86,6 +86,31 @@ final class SuggestionsViewModel: ObservableObject {
         !isFutureDateString(selectedDate)
     }
 
+    var emptyStateMessage: String? {
+        if case .empty(let message) = state {
+            return message
+        }
+
+        guard response != nil, visibleSuggestions.isEmpty else {
+            return nil
+        }
+
+        return "No meal suggestions are available for the visible meal slots on \(formattedDateTitle(from: selectedDate)). Pull to refresh if the menu just changed."
+    }
+
+    var shouldShowLoadingCard: Bool {
+        guard visibleSuggestions.isEmpty else {
+            return false
+        }
+
+        switch state {
+        case .idle, .loading:
+            return true
+        case .ready, .empty, .failed:
+            return false
+        }
+    }
+
     var firstPastMealIndex: Int? {
         guard isTodaySelected else { return nil }
         let expiredMeals = expiredMealNames(for: selectedDate)

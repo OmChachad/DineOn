@@ -1,0 +1,36 @@
+{
+  "id": "profile_boundary_negative_calories",
+  "suite": "nutrition_profile_boundary",
+  "endpoint": "/nutrition/profile",
+  "report_note": "Out-of-range numeric values should fail before hitting model logic.",
+  "request": {
+    "schema_version": 1,
+    "preference_notes": [
+      "help me eat better"
+    ],
+    "healthkit": {
+      "active_calories_avg": -20
+    }
+  },
+  "expected_status": 422,
+  "status_code": 422,
+  "passed": true,
+  "failure_reasons": [],
+  "response": {
+    "detail": [
+      {
+        "type": "greater_than_equal",
+        "loc": [
+          "body",
+          "healthkit",
+          "active_calories_avg"
+        ],
+        "msg": "Input should be greater than or equal to 0",
+        "input": -20,
+        "ctx": {
+          "ge": 0.0
+        }
+      }
+    ]
+  }
+}
