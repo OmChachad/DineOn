@@ -240,6 +240,22 @@ func visibleMealNames(from meals: [String], chosenDate: String, now: Date = .now
         .sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }
 }
 
+func prioritizedMealNames(from meals: [String], chosenDate: String, now: Date = .now) -> [String] {
+    let sortedMeals = meals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }
+    let expired = expiredMealNames(for: chosenDate, now: now)
+    guard !expired.isEmpty else {
+        return sortedMeals
+    }
+
+    let upcoming = sortedMeals.filter { !expired.contains($0) }
+    let past = sortedMeals.filter { expired.contains($0) }
+    return upcoming + past
+}
+
+func isFutureDateString(_ dateString: String, now: Date = .now) -> Bool {
+    dateString > DiningFetcher.formatDate(now)
+}
+
 // MARK: - Wrapper
 
 struct DiningMenu: Codable {

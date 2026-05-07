@@ -66,12 +66,12 @@ extension DiningMenu {
             return "No dining data available for \(date)."
         }
 
-        var output = "Visible Dining Suggestions for \(date)\n\n"
+        var output = "DATE \(date)\n"
         let venueNames = venues(for: date).sorted()
         var includedVenueCount = 0
 
         for venue in venueNames {
-            let mealNames = visibleMealNames(from: meals(for: date, venue: venue), chosenDate: date)
+            let mealNames = prioritizedMealNames(from: meals(for: date, venue: venue), chosenDate: date)
             var venueOutput = ""
 
             for meal in mealNames {
@@ -92,16 +92,16 @@ extension DiningMenu {
                         continue
                     }
 
-                    mealOutput += "— Station: \(displayStationName(station, hasAAZAccess: preferences.hasAAZAccess))\n"
+                    mealOutput += "STATION \(displayStationName(station, hasAAZAccess: preferences.hasAAZAccess))\n"
                     mealOutput += visibleLines.joined(separator: "\n")
-                    mealOutput += "\n\n"
+                    mealOutput += "\n"
                 }
 
                 guard !mealOutput.isEmpty else {
                     continue
                 }
 
-                venueOutput += "🍽️ Meal: \(meal)\n\n"
+                venueOutput += "MEAL \(meal)\n"
                 venueOutput += mealOutput
             }
 
@@ -110,9 +110,7 @@ extension DiningMenu {
             }
 
             includedVenueCount += 1
-            output += "==============================\n"
-            output += "🏫 Venue: \(venue)\n"
-            output += "==============================\n\n"
+            output += "VENUE \(venue)\n"
             output += venueOutput
         }
 
@@ -130,7 +128,7 @@ extension DiningMenu {
 
         var visibleMealsSet: Set<String> = []
         for venue in venues(for: date) {
-            let mealsForVenue = visibleMealNames(from: meals(for: date, venue: venue), chosenDate: date)
+            let mealsForVenue = prioritizedMealNames(from: meals(for: date, venue: venue), chosenDate: date)
             for meal in mealsForVenue {
                 let hasVisibleItems = stations(for: date, venue: venue, meal: meal)
                     .filter { preferences.hasAAZAccess || !isAAZStation($0) }
@@ -146,7 +144,7 @@ extension DiningMenu {
             }
         }
 
-        return visibleMealsSet.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }
+        return prioritizedMealNames(from: Array(visibleMealsSet), chosenDate: date)
     }
     
     // MARK: - Helpers
@@ -235,7 +233,7 @@ extension DiningMenu {
                 guard !childLines.isEmpty else {
                     continue
                 }
-                lines.append("\(indent)Section: \(node.name)")
+                lines.append("\(indent)SECTION \(node.name)")
                 lines.append(contentsOf: childLines)
             case .info:
                 continue
@@ -250,27 +248,27 @@ extension DiningMenu {
         indent: String,
         preferences: MenuVisibilityPreferences
     ) -> String {
-        var line = "\(indent)• \(node.name)"
+        var components = ["\(indent)ITEM \(node.name)"]
 
         if preferences.isFavorite(node.name) {
-            line += " [FAVORITE]"
+            components.append("fav")
         }
 
         if let prefs = node.preferences, !prefs.isEmpty {
             let prefList = prefs.map(\.rawValue).joined(separator: ", ")
-            line += " [\(prefList)]"
+            components.append("pref=\(prefList)")
         }
 
         if let allergens = node.allergens, !allergens.isEmpty {
             let allergenList = allergens.map(\.rawValue).joined(separator: ", ")
-            line += " {Allergens: \(allergenList)}"
+            components.append("allergen=\(allergenList)")
         }
 
         if let disclaimers = node.disclaimers, !disclaimers.isEmpty {
             let disclaimerList = disclaimers.joined(separator: "; ")
-            line += " {Notes: \(disclaimerList)}"
+            components.append("note=\(disclaimerList)")
         }
 
-        return line
+        return components.joined(separator: " | ")
     }
 }

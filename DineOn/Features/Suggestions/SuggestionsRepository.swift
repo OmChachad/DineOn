@@ -46,12 +46,20 @@ final class SuggestionsRepository: ObservableObject {
         )
     }
 
-    func cachedSuggestions(for date: String) -> MealSuggestionResponse? {
-        cachedSuggestionsByDate[date]?.response
+    func cachedSnapshot(for date: String) -> DateScopedSuggestionSnapshot? {
+        cachedSuggestionsByDate[date]
     }
 
-    func saveSuggestions(_ response: MealSuggestionResponse) {
-        cachedSuggestionsByDate[response.date] = DateScopedSuggestionSnapshot(date: response.date, response: response)
+    func cachedSuggestions(for date: String) -> MealSuggestionResponse? {
+        cachedSnapshot(for: date)?.response
+    }
+
+    func saveSuggestions(_ response: MealSuggestionResponse, cacheKey: String) {
+        cachedSuggestionsByDate[response.date] = DateScopedSuggestionSnapshot(
+            date: response.date,
+            cacheKey: cacheKey,
+            response: response
+        )
         persist(cachedSuggestionsByDate, forKey: suggestionsDefaultsKey)
     }
 

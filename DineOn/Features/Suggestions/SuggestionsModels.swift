@@ -6,6 +6,7 @@
 //
 
 import Foundation
+import CryptoKit
 
 let suggestionsSchemaVersion = 1
 
@@ -37,6 +38,7 @@ struct MealSuggestionResponse: Codable, Equatable {
 
 struct DateScopedSuggestionSnapshot: Codable, Equatable {
     let date: String
+    let cacheKey: String
     let response: MealSuggestionResponse
 }
 
@@ -174,6 +176,41 @@ struct SuggestionsRequestPayload: Codable {
         case menuExport = "menu_export"
         case clientContext = "client_context"
     }
+}
+
+struct SuggestionsCacheKeyInput: Codable {
+    let date: String
+    let mealSlots: [String]
+    let preferences: SuggestionsPreferencesPayload
+    let nutritionProfile: NutritionProfile?
+    let menuExport: String
+}
+
+func suggestionsCacheKey(
+    date: String,
+    mealSlots: [String],
+    preferences: SuggestionsPreferencesPayload,
+    nutritionProfile: NutritionProfile?,
+    menuExport: String
+) -> String {
+    let encoder = JSONEncoder()
+    encoder.outputFormatting = [.sortedKeys]
+    encoder.dateEncodingStrategy = .iso8601
+
+    let input = SuggestionsCacheKeyInput(
+        date: date,
+        mealSlots: mealSlots,
+        preferences: preferences,
+        nutritionProfile: nutritionProfile,
+        menuExport: menuExport
+    )
+
+    guard let data = try? encoder.encode(input) else {
+        return "\(date)::\(mealSlots.joined(separator: ","))::\(menuExport.count)"
+    }
+
+    let digest = SHA256.hash(data: data)
+    return digest.map { String(format: "%02x", $0) }.joined()
 }
 
 enum SuggestionsState: Equatable {
