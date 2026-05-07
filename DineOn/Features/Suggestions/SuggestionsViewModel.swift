@@ -86,6 +86,19 @@ final class SuggestionsViewModel: ObservableObject {
         !isFutureDateString(selectedDate)
     }
 
+    var firstPastMealIndex: Int? {
+        guard isTodaySelected else { return nil }
+        let expiredMeals = expiredMealNames(for: selectedDate)
+        guard !expiredMeals.isEmpty else { return nil }
+
+        let index = visibleSuggestions.firstIndex { expiredMeals.contains($0.meal) }
+        guard let index, index > 0, index < visibleSuggestions.count else {
+            return nil
+        }
+
+        return index
+    }
+
     func load(for date: String) async {
         selectedDate = date
         availableMealSlots = []

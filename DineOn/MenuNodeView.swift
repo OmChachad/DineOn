@@ -75,8 +75,21 @@ struct MenuHeaderLabel: View {
 struct MenuItemView: View {
     @Environment(\.colorScheme) private var colorScheme
     @StateObject private var preferences = Preferences.shared
+    @StateObject private var suggestionsRepository = SuggestionsRepository.shared
     let node: MenuNode
     let chosenDate: String
+
+    private var isFavorite: Bool {
+        preferences.favoriteDishes.contains(node.name)
+    }
+
+    private var isSuggested: Bool {
+        suggestionsRepository.isSuggestedItem(node.name, for: chosenDate)
+    }
+
+    private var shouldHighlight: Bool {
+        isFavorite || isSuggested
+    }
     
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -121,14 +134,14 @@ struct MenuItemView: View {
         .contentShape(.rect)
         .contextMenu {
             Button(action: {
-                if preferences.favoriteDishes.contains(node.name) {
+                if isFavorite {
                     preferences.favoriteDishes.remove(node.name)
                 } else {
                     preferences.favoriteDishes.insert(node.name)
                 }
             }) {
-                Text(preferences.favoriteDishes.contains(node.name) ? "Remove from Favorites" : "Add to Favorites")
-                Image(systemName: preferences.favoriteDishes.contains(node.name) ? "star.fill" : "star")
+                Text(isFavorite ? "Remove from Favorites" : "Add to Favorites")
+                Image(systemName: isFavorite ? "star.fill" : "star")
             }
             
             
@@ -147,26 +160,40 @@ struct MenuItemView: View {
                 .background(Color(UIColor.systemBackground))
                 .cornerRadius(5)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? -10 : 0)
+                .padding(.vertical, shouldHighlight ? -10 : 0)
         }
-        .padding(.vertical, preferences.favoriteDishes.contains(node.name) ? 10 : 0)
+        .padding(.vertical, shouldHighlight ? 10 : 0)
         .background {
-            if preferences.favoriteDishes.contains(node.name) {
-                HStack(spacing: 0) {
-                    RoundedRectangle(cornerRadius: 10, style: .continuous)
-                        .frame(width: 3.5)
-                        .foregroundStyle(.pink)
-                        .padding(.leading)
-                    
-                    LinearGradient(colors: [Color.pink.opacity(colorScheme == .dark ? 0.3 : 0.2), Color.clear, Color.clear, Color.clear], startPoint: .leading, endPoint: .trailing)
-                        .frame(maxWidth: 500)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+            ZStack {
+                if isSuggested {
+                    menuItemHighlight(color: .purple, leadingInset: 0)
                 }
-                .padding(.leading, -30)
-                .ignoresSafeArea()
 
+                if isFavorite {
+                    menuItemHighlight(color: .pink, leadingInset: isSuggested ? 5.5 : 0)
+                }
             }
         }
+    }
+
+    @ViewBuilder
+    private func menuItemHighlight(color: Color, leadingInset: CGFloat) -> some View {
+        HStack(spacing: 0) {
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .frame(width: 3.5)
+                .foregroundStyle(color)
+                .padding(.leading)
+
+            LinearGradient(
+                colors: [color.opacity(colorScheme == .dark ? 0.3 : 0.2), Color.clear, Color.clear, Color.clear],
+                startPoint: .leading,
+                endPoint: .trailing
+            )
+            .frame(maxWidth: 500)
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .padding(.leading, -30 + leadingInset)
+        .ignoresSafeArea()
     }
 }
 

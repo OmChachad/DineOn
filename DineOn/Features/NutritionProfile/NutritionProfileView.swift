@@ -8,7 +8,13 @@
 import SwiftUI
 
 struct NutritionProfileView: View {
+    let onProfileSaved: (() async -> Void)?
+
     @StateObject private var viewModel = NutritionProfileViewModel()
+
+    init(onProfileSaved: (() async -> Void)? = nil) {
+        self.onProfileSaved = onProfileSaved
+    }
 
     var body: some View {
         Form {
@@ -93,7 +99,12 @@ struct NutritionProfileView: View {
 
             Section {
                 Button {
-                    Task { await viewModel.saveAndAnalyze() }
+                    Task {
+                        let didSave = await viewModel.saveAndAnalyze()
+                        if didSave {
+                            await onProfileSaved?()
+                        }
+                    }
                 } label: {
                     HStack {
                         if viewModel.state.phase == .saving {
@@ -160,37 +171,42 @@ struct NutritionProfileView: View {
 
 struct NutritionProfileSummaryCard: View {
     @ObservedObject var repository: NutritionProfileRepository
+    var showsChevron = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Label("Nutrition Profile", systemImage: "fork.knife.circle.fill")
+                Label("Eating Preferences & Goals", systemImage: "fork.knife.circle.fill")
                     .font(.headline)
+                
                 Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-            }
-
-            if let profile = repository.snapshot.profile {
-                HStack(spacing: 12) {
-                    if let calories = profile.dailyCalories {
-                        summaryPill(title: "Calories", value: "\(calories)")
-                    }
-                    if let protein = profile.proteinG {
-                        summaryPill(title: "Protein", value: "\(protein)g")
-                    }
+                
+                if showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
                 }
-
-                Text(profile.summary)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(3)
-            } else {
-                Text("Save your nutrition goals and HealthKit snapshot to generate reusable calorie and macro targets for later meal planning.")
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
             }
+
+//            if let profile = repository.snapshot.profile {
+//                HStack(spacing: 12) {
+//                    if let calories = profile.dailyCalories {
+//                        summaryPill(title: "Calories", value: "\(calories)")
+//                    }
+//                    if let protein = profile.proteinG {
+//                        summaryPill(title: "Protein", value: "\(protein)g")
+//                    }
+//                }
+//
+//                Text(profile.summary)
+//                    .font(.subheadline)
+//                    .foregroundStyle(.secondary)
+//                    .lineLimit(3)
+//            } else {
+//                Text("Save your nutrition goals and HealthKit snapshot to generate reusable calorie and macro targets for later meal planning.")
+//                    .font(.subheadline)
+//                    .foregroundStyle(.secondary)
+//            }
         }
         .padding(.vertical, 6)
     }

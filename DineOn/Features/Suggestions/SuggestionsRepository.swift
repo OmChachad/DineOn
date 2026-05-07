@@ -54,6 +54,22 @@ final class SuggestionsRepository: ObservableObject {
         cachedSnapshot(for: date)?.response
     }
 
+    func isSuggestedItem(_ itemName: String, for date: String) -> Bool {
+        let normalizedItemName = normalizeSuggestedItemName(itemName)
+        guard !normalizedItemName.isEmpty else { return false }
+
+        return cachedSuggestions(for: date)?.meals.contains(where: { suggestion in
+            suggestion.items.contains(where: { suggestedItem in
+                let normalizedSuggestedItem = normalizeSuggestedItemName(suggestedItem)
+                guard !normalizedSuggestedItem.isEmpty else { return false }
+
+                return normalizedSuggestedItem == normalizedItemName
+                    || normalizedSuggestedItem.contains(normalizedItemName)
+                    || normalizedItemName.contains(normalizedSuggestedItem)
+            })
+        }) ?? false
+    }
+
     func saveSuggestions(_ response: MealSuggestionResponse, cacheKey: String) {
         cachedSuggestionsByDate[response.date] = DateScopedSuggestionSnapshot(
             date: response.date,
@@ -123,5 +139,11 @@ final class SuggestionsRepository: ObservableObject {
             print("❌ Failed to decode suggestions data for \(key): \(error.localizedDescription)")
             return defaultValue
         }
+    }
+
+    private func normalizeSuggestedItemName(_ value: String) -> String {
+        value
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+            .lowercased()
     }
 }

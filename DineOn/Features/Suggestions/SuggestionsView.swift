@@ -13,11 +13,16 @@ struct SuggestionsView: View {
 
     @Environment(\.scenePhase) private var scenePhase
     @StateObject private var viewModel = SuggestionsViewModel()
+    @StateObject private var nutritionRepository = NutritionProfileRepository.shared
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
-                metricsSection
+                nutritionProfileSection
+
+                if viewModel.isTodaySelected {
+                    metricsSection
+                }
 
                 if viewModel.isRefreshing, !viewModel.visibleSuggestions.isEmpty {
                     HStack(spacing: 8) {
@@ -39,6 +44,9 @@ struct SuggestionsView: View {
         .task(id: chosenDate) {
             await viewModel.load(for: chosenDate)
         }
+        .task {
+            await nutritionRepository.loadIfNeeded()
+        }
         .refreshable {
             await viewModel.refreshCurrentDate()
         }
@@ -51,9 +59,24 @@ struct SuggestionsView: View {
     }
 
     @ViewBuilder
+    private var nutritionProfileSection: some View {
+        NavigationLink {
+            NutritionProfileView {
+                await viewModel.refreshCurrentDate()
+            }
+        } label: {
+            NutritionProfileSummaryCard(repository: nutritionRepository)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(18)
+                .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 28, style: .continuous))
+        }
+        .buttonStyle(.plain)
+    }
+
+    @ViewBuilder
     private var metricsSection: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text(viewModel.isTodaySelected ? "Today’s Nutrition Progress" : "Planned Nutrition Progress")
+            Text("Today’s Nutrition Progress")
                 .font(.headline)
 
             HStack(alignment: .top, spacing: 14) {
@@ -76,7 +99,11 @@ struct SuggestionsView: View {
             loadingCard
         } else {
             VStack(alignment: .leading, spacing: 14) {
-                ForEach(viewModel.visibleSuggestions) { suggestion in
+                ForEach(Array(viewModel.visibleSuggestions.enumerated()), id: \.element.id) { index, suggestion in
+                    if viewModel.firstPastMealIndex == index {
+                        suggestionsDivider(title: "Past Meals")
+                    }
+
                     SuggestionMealCard(
                         suggestion: suggestion,
                         isConsumed: viewModel.isConsumed(suggestion),
@@ -122,6 +149,24 @@ struct SuggestionsView: View {
         .background(.thinMaterial, in: RoundedRectangle(cornerRadius: 24, style: .continuous))
     }
 
+    private func suggestionsDivider(title: String) -> some View {
+        HStack(spacing: 12) {
+            Rectangle()
+                .fill(Color.secondary.opacity(0.25))
+                .frame(height: 1)
+
+            Text(title)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .fixedSize()
+
+            Rectangle()
+                .fill(Color.secondary.opacity(0.25))
+                .frame(height: 1)
+        }
+        .padding(.vertical, 4)
+    }
+
     private var formattedDateLabel: String {
         guard let date = SuggestionsView.dateFormatter.date(from: chosenDate) else {
             return chosenDate
@@ -159,8 +204,6 @@ private struct SuggestionMealCard: View {
                 Button(action: action) {
                     Text(buttonTitle)
                         .font(.caption.weight(.semibold))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
                 }
                 .buttonStyle(.glassProminent)
                 .tint(buttonTint)

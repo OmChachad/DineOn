@@ -9,21 +9,12 @@ import SwiftUI
 
 struct PreferencesView: View {
     @StateObject private var preferences = Preferences.shared
-    @StateObject private var nutritionRepository = NutritionProfileRepository.shared
     
     @State private var newKeyword: String = ""
     @State private var newFavoriteDish: String = ""
     
     var body: some View {
         Form {
-            Section {
-                NavigationLink {
-                    NutritionProfileView()
-                } label: {
-                    NutritionProfileSummaryCard(repository: nutritionRepository)
-                }
-            }
-
             Section("Allergens") {
                 Toggle("Allergen Awareness Zone (AAZ) access", isOn: $preferences.hasAAZAccess)
                 
@@ -144,9 +135,6 @@ struct PreferencesView: View {
             if preferences.notificationsEnabled {
                 Task { await NotificationManager.shared.scheduleDailyNotification() }
             }
-        }
-        .task {
-            await nutritionRepository.loadIfNeeded()
         }
     }
 }

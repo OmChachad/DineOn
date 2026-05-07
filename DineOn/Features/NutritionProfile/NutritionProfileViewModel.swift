@@ -79,7 +79,7 @@ final class NutritionProfileViewModel: ObservableObject {
         scheduleDraftPersistence()
     }
 
-    func saveAndAnalyze() async {
+    func saveAndAnalyze() async -> Bool {
         do {
             let notes = try validatedNotes()
             state.phase = .saving
@@ -93,8 +93,10 @@ final class NutritionProfileViewModel: ObservableObject {
             state = NutritionProfileState(phase: .ready, isDirty: false)
             await repository.storeSuccessfulAnalysis(draft: draft, analyzedNotes: notes, profile: profile)
             syncFromRepository()
+            return true
         } catch {
             state.phase = .failed(error.localizedDescription)
+            return false
         }
     }
 

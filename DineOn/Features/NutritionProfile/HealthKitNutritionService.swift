@@ -28,7 +28,7 @@ final class HealthKitNutritionService {
         case .sharingAuthorized:
             return "HealthKit is connected. DineOn will fetch a fresh snapshot when you save."
         case .sharingDenied:
-            return "HealthKit access looks limited or denied. DineOn can still analyze your text preferences."
+            return "HealthKit access is optional. DineOn can still analyze your text preferences."
         @unknown default:
             return "HealthKit status is unavailable."
         }
