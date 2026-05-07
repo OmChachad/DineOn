@@ -14,7 +14,7 @@ struct ContentView: View {
 
     @State private var chosenDate: String = DiningFetcher.formatDate(Date())
     @State private var chosenMeal: String? = nil
-    @State private var chosenTab: String = ""
+    @State private var chosenTab: String = "Suggestions"
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -75,6 +75,10 @@ struct ContentView: View {
     var body: some View {
         NavigationStack {
             TabView(selection: $chosenTab) {
+                Tab("Suggestions", systemImage: "sparkles", value: "Suggestions") {
+                    SuggestionsView(chosenDate: chosenDate, isVisible: chosenTab == "Suggestions")
+                }
+
                 ForEach(sortedVenues, id: \.rawValue) { venue in
                     Tab(venue.shortName, systemImage: venue.iconName, value: venue.rawValue) {
                         venueTab(for: venue)

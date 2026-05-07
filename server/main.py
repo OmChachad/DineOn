@@ -6,12 +6,13 @@ from contextlib import asynccontextmanager, suppress
 from fastapi import FastAPI, HTTPException, Request
 from pydantic import ValidationError
 
-from models import NutritionProfileRequest, NutritionProfileResponse
+from models import NutritionProfileRequest, NutritionProfileResponse, SuggestionsRequest, SuggestionsResponse
 from pipeline.classifier import NutritionClassifier
 from pipeline.openai_client import OpenAIClient
 from pipeline.rag_ingest import ingest_knowledge_base
 from pipeline.rag_query import NutritionRAGService
 from pipeline.safety import apply_safety_checks
+from pipeline.suggestions import NutritionSuggestionsEngine
 from pipeline.synthesizer import NutritionSynthesizer
 
 
@@ -38,6 +39,7 @@ async def lifespan(app: FastAPI):
     app.state.startup_error = None
     app.state.classifier = NutritionClassifier(openai_client)
     app.state.synthesizer = NutritionSynthesizer(openai_client)
+    app.state.suggestions = NutritionSuggestionsEngine(openai_client)
     app.state.rag = None
     app.state.rag_ready = False
     app.state.rag_init_task = asyncio.create_task(initialize_rag(app))
@@ -83,5 +85,19 @@ async def analyze_nutrition_profile(
         retrieval = await request.app.state.rag.retrieve(intent, payload.healthkit)
         profile = await request.app.state.synthesizer.synthesize(request=payload, retrieval=retrieval)
         return apply_safety_checks(profile=profile, request=payload, intent=intent)
+    except ValidationError as exc:
+        raise HTTPException(status_code=400, detail=exc.errors()) from exc
+
+
+@app.post("/nutrition/suggestions", response_model=SuggestionsResponse)
+async def generate_nutrition_suggestions(
+    payload: SuggestionsRequest,
+    request: Request,
+) -> SuggestionsResponse:
+    if not request.app.state.openai_client.is_configured:
+        raise HTTPException(status_code=503, detail="OPENAI_API_KEY is not configured.")
+
+    try:
+        return await request.app.state.suggestions.generate(payload)
     except ValidationError as exc:
         raise HTTPException(status_code=400, detail=exc.errors()) from exc

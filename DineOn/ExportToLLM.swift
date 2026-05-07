@@ -60,6 +60,94 @@ extension DiningMenu {
         
         return output.trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    func exportSuggestionsForLLM(date: String, preferences: MenuVisibilityPreferences) -> String {
+        guard data[date] != nil else {
+            return "No dining data available for \(date)."
+        }
+
+        var output = "Visible Dining Suggestions for \(date)\n\n"
+        let venueNames = venues(for: date).sorted()
+        var includedVenueCount = 0
+
+        for venue in venueNames {
+            let mealNames = visibleMealNames(from: meals(for: date, venue: venue), chosenDate: date)
+            var venueOutput = ""
+
+            for meal in mealNames {
+                let stationNames = stations(for: date, venue: venue, meal: meal).sorted()
+                var mealOutput = ""
+
+                for station in stationNames {
+                    guard preferences.hasAAZAccess || !isAAZStation(station) else {
+                        continue
+                    }
+
+                    guard let stationNodes = nodes(for: date, venue: venue, meal: meal, station: station) else {
+                        continue
+                    }
+
+                    let visibleLines = suggestionLines(from: stationNodes, indent: "  ", preferences: preferences)
+                    guard !visibleLines.isEmpty else {
+                        continue
+                    }
+
+                    mealOutput += "— Station: \(displayStationName(station, hasAAZAccess: preferences.hasAAZAccess))\n"
+                    mealOutput += visibleLines.joined(separator: "\n")
+                    mealOutput += "\n\n"
+                }
+
+                guard !mealOutput.isEmpty else {
+                    continue
+                }
+
+                venueOutput += "🍽️ Meal: \(meal)\n\n"
+                venueOutput += mealOutput
+            }
+
+            guard !venueOutput.isEmpty else {
+                continue
+            }
+
+            includedVenueCount += 1
+            output += "==============================\n"
+            output += "🏫 Venue: \(venue)\n"
+            output += "==============================\n\n"
+            output += venueOutput
+        }
+
+        guard includedVenueCount > 0 else {
+            return "No visible dining suggestions are available for \(date)."
+        }
+
+        return output.trimmingCharacters(in: .whitespacesAndNewlines)
+    }
+
+    func suggestionMealSlots(for date: String, preferences: MenuVisibilityPreferences) -> [String] {
+        guard data[date] != nil else {
+            return []
+        }
+
+        var visibleMealsSet: Set<String> = []
+        for venue in venues(for: date) {
+            let mealsForVenue = visibleMealNames(from: meals(for: date, venue: venue), chosenDate: date)
+            for meal in mealsForVenue {
+                let hasVisibleItems = stations(for: date, venue: venue, meal: meal)
+                    .filter { preferences.hasAAZAccess || !isAAZStation($0) }
+                    .contains { station in
+                        guard let stationNodes = nodes(for: date, venue: venue, meal: meal, station: station) else {
+                            return false
+                        }
+                        return !suggestionLines(from: stationNodes, indent: "  ", preferences: preferences).isEmpty
+                    }
+                if hasVisibleItems {
+                    visibleMealsSet.insert(meal)
+                }
+            }
+        }
+
+        return visibleMealsSet.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }
+    }
     
     // MARK: - Helpers
     
@@ -118,5 +206,71 @@ extension DiningMenu {
         case .availableUntil:
             return "Available until \(timingInfo.timeText)"
         }
+    }
+
+    private func suggestionLines(
+        from nodes: [MenuNode],
+        indent: String,
+        preferences: MenuVisibilityPreferences
+    ) -> [String] {
+        var lines: [String] = []
+
+        for node in nodes {
+            guard shouldDisplayNode(node, preferences: preferences) else {
+                continue
+            }
+
+            switch node.type {
+            case .item:
+                guard itemFitsPreferences(node, preferences: preferences) else {
+                    continue
+                }
+                lines.append(formattedSuggestionItem(node, indent: indent, preferences: preferences))
+            case .header, .timeHeader:
+                let childLines = suggestionLines(
+                    from: node.items ?? [],
+                    indent: "\(indent)  ",
+                    preferences: preferences
+                )
+                guard !childLines.isEmpty else {
+                    continue
+                }
+                lines.append("\(indent)Section: \(node.name)")
+                lines.append(contentsOf: childLines)
+            case .info:
+                continue
+            }
+        }
+
+        return lines
+    }
+
+    private func formattedSuggestionItem(
+        _ node: MenuNode,
+        indent: String,
+        preferences: MenuVisibilityPreferences
+    ) -> String {
+        var line = "\(indent)• \(node.name)"
+
+        if preferences.isFavorite(node.name) {
+            line += " [FAVORITE]"
+        }
+
+        if let prefs = node.preferences, !prefs.isEmpty {
+            let prefList = prefs.map(\.rawValue).joined(separator: ", ")
+            line += " [\(prefList)]"
+        }
+
+        if let allergens = node.allergens, !allergens.isEmpty {
+            let allergenList = allergens.map(\.rawValue).joined(separator: ", ")
+            line += " {Allergens: \(allergenList)}"
+        }
+
+        if let disclaimers = node.disclaimers, !disclaimers.isEmpty {
+            let disclaimerList = disclaimers.joined(separator: "; ")
+            line += " {Notes: \(disclaimerList)}"
+        }
+
+        return line
     }
 }

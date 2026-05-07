@@ -19,15 +19,7 @@ struct MealView: View {
     }
 
     func expiredMeals() -> [String] {
-        guard chosenDate == DiningFetcher.formatDate(Date()) else { return [] }
-
-        let hour = Calendar.current.component(.hour, from: Date.now)
-        switch hour {
-        case 1...10:  return []
-        case 11...16: return ["Breakfast"]
-        case 17...24: return ["Breakfast", "Lunch", "Brunch"]
-        default:      return []
-        }
+        Array(expiredMealNames(for: chosenDate))
     }
 
     var isExpired: Bool { expiredMeals().contains(meal) }

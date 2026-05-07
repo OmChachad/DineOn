@@ -1,6 +1,6 @@
 import pytest
 
-from models import MAX_PREFERENCE_NOTE_LENGTH, NutritionProfileRequest
+from models import MAX_PREFERENCE_NOTE_LENGTH, NutritionProfileRequest, SuggestionsRequest
 
 
 def test_request_trims_blank_notes() -> None:
@@ -24,3 +24,21 @@ def test_request_rejects_long_notes() -> None:
                 "healthkit": {},
             }
         )
+
+
+def test_suggestions_request_allows_missing_nutrition_profile() -> None:
+    request = SuggestionsRequest.model_validate(
+        {
+            "schema_version": 1,
+            "date": "2026-05-06",
+            "meal_slots": ["Lunch", "Dinner"],
+            "preferences": {},
+            "nutrition_profile": None,
+            "healthkit": {},
+            "menu_export": "Visible Dining Suggestions for 2026-05-06",
+            "client_context": {},
+        }
+    )
+
+    assert request.nutrition_profile is None
+    assert request.meal_slots == ["Lunch", "Dinner"]

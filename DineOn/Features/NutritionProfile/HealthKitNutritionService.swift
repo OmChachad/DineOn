@@ -102,6 +102,39 @@ final class HealthKitNutritionService {
         return snapshot
     }
 
+    func fetchTodayActiveCalories() async -> Double? {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            return nil
+        }
+
+        let calendar = Calendar.current
+        let startDate = calendar.startOfDay(for: Date())
+        guard let endDate = calendar.date(byAdding: .day, value: 1, to: startDate) else {
+            return nil
+        }
+
+        let predicate = HKQuery.predicateForSamples(withStart: startDate, end: endDate)
+        let samplePredicate = HKSamplePredicate.quantitySample(
+            type: HKQuantityType(.activeEnergyBurned),
+            predicate: predicate
+        )
+
+        let descriptor = HKStatisticsQueryDescriptor(
+            predicate: samplePredicate,
+            options: .cumulativeSum
+        )
+
+        do {
+            let result = try await descriptor.result(for: healthStore)
+            guard let value = result?.sumQuantity()?.doubleValue(for: .kilocalorie()) else {
+                return nil
+            }
+            return rounded(value)
+        } catch {
+            return nil
+        }
+    }
+
     private var readTypes: Set<HKObjectType> {
         [
             HKCharacteristicType(.dateOfBirth),

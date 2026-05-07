@@ -1,0 +1,66 @@
+{
+  "request": {
+    "schema_version": 1,
+    "date": "2026-05-06",
+    "meal_slots": [
+      "Breakfast",
+      "Lunch",
+      "Dinner"
+    ],
+    "preferences": {
+      "has_aaz_access": false,
+      "has_dietary_restrictions": true,
+      "selected_allergens": [
+        "dairy"
+      ],
+      "selected_dietary_preferences": [
+        "vegetarian"
+      ],
+      "excluded_keywords": [
+        "shrimp"
+      ],
+      "favorite_dishes": [
+        "pasta"
+      ]
+    },
+    "nutrition_profile": null,
+    "healthkit": {
+      "active_calories_today": 420,
+      "steps_daily_avg": 8400
+    },
+    "menu_export": "Visible Dining Suggestions for 2026-05-06\n\n🏫 Venue: Parkside\n🍽️ Meal: Lunch\n— Station: Entrees\n  • Pesto Pasta [FAVORITE] [vegetarian]\n  • Roasted Vegetables [vegetarian]",
+    "client_context": {
+      "consumed_meal_keys": [
+        "Breakfast"
+      ]
+    }
+  },
+  "response": {
+    "schema_version": 1,
+    "generated_at": "2026-05-06T19:00:00Z",
+    "date": "2026-05-06",
+    "daily_calorie_target": null,
+    "active_calories_today": 420,
+    "meals": [
+      {
+        "meal": "Lunch",
+        "meal_key": "Lunch",
+        "venue": "Parkside",
+        "items": [
+          "Pesto Pasta",
+          "Roasted Vegetables"
+        ],
+        "estimated_calories": 720,
+        "estimated_protein_g": 24,
+        "estimated_carbs_g": 82,
+        "estimated_fat_g": 28,
+        "rationale": "This keeps lunch vegetarian, leans into a favorite, and offers a balanced plate for the middle of the day.",
+        "optional_caution": null
+      }
+    ],
+    "summary": "Favor balanced vegetarian plates and keep the rest of the day lighter if you choose the pasta-heavy lunch.",
+    "warnings": [
+      "Breakfast is already logged as consumed."
+    ]
+  }
+}

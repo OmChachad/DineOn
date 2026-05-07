@@ -91,6 +91,53 @@ let mealOrder: [String: Int] = [
 let allergenAwarenessZoneStationMarker = "Allergen Awareness Zone"
 let allergenAwarenessZoneAccessSuffix = "(must register for access)"
 
+struct MenuVisibilityPreferences {
+    let hasAAZAccess: Bool
+    let hasDietaryRestrictions: Bool
+    let selectedAllergens: Set<Allergen>
+    let selectedDietaryPreferences: Set<DietaryPreference>
+    let excludedKeywords: Set<String>
+    let favoriteDishes: Set<String>
+
+    init(
+        hasAAZAccess: Bool,
+        hasDietaryRestrictions: Bool,
+        selectedAllergens: Set<Allergen>,
+        selectedDietaryPreferences: Set<DietaryPreference>,
+        excludedKeywords: Set<String>,
+        favoriteDishes: Set<String>
+    ) {
+        self.hasAAZAccess = hasAAZAccess
+        self.hasDietaryRestrictions = hasDietaryRestrictions
+        self.selectedAllergens = selectedAllergens
+        self.selectedDietaryPreferences = selectedDietaryPreferences
+        self.excludedKeywords = Set(
+            excludedKeywords
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() }
+                .filter { !$0.isEmpty }
+        )
+        self.favoriteDishes = favoriteDishes
+    }
+
+    init(preferences: Preferences) {
+        self.init(
+            hasAAZAccess: preferences.hasAAZAccess,
+            hasDietaryRestrictions: preferences.hasDietaryRestrictions,
+            selectedAllergens: Set(preferences.selectedAllergens.compactMap(Allergen.init(rawValue:))),
+            selectedDietaryPreferences: Set(preferences.selectedDietaryPreferences.compactMap(DietaryPreference.init(rawValue:))),
+            excludedKeywords: preferences.excludedKeywords,
+            favoriteDishes: preferences.favoriteDishes
+        )
+    }
+
+    func isFavorite(_ itemName: String) -> Bool {
+        let normalizedItem = itemName.lowercased()
+        return favoriteDishes.contains { favorite in
+            normalizedItem.contains(favorite.lowercased())
+        }
+    }
+}
+
 func isAAZStation(_ stationName: String) -> Bool {
     stationName.localizedCaseInsensitiveContains(allergenAwarenessZoneStationMarker)
 }
@@ -107,6 +154,46 @@ func isAAZNode(_ node: MenuNode) -> Bool {
     node.name
         .trimmingCharacters(in: .whitespacesAndNewlines)
         .localizedCaseInsensitiveContains("AAZ ")
+}
+
+func shouldDisplayNode(_ node: MenuNode, preferences: MenuVisibilityPreferences) -> Bool {
+    preferences.hasAAZAccess || !isAAZNode(node)
+}
+
+func itemFitsPreferences(_ node: MenuNode, preferences: MenuVisibilityPreferences) -> Bool {
+    let normalizedName = node.name.lowercased()
+    if preferences.excludedKeywords.contains(where: normalizedName.contains) {
+        return false
+    }
+
+    let nodeAllergens = Set(node.allergens ?? [])
+    if !preferences.selectedAllergens.isDisjoint(with: nodeAllergens) {
+        return false
+    }
+
+    guard preferences.hasDietaryRestrictions else {
+        return true
+    }
+
+    let nodePreferences = Set(node.preferences ?? [])
+    for preference in preferences.selectedDietaryPreferences {
+        switch preference {
+        case .vegetarian:
+            guard nodePreferences.contains(.vegetarian) || nodePreferences.contains(.vegan) else {
+                return false
+            }
+        case .vegan:
+            guard nodePreferences.contains(.vegan) else {
+                return false
+            }
+        default:
+            guard nodePreferences.contains(preference) else {
+                return false
+            }
+        }
+    }
+
+    return true
 }
 
 let nutsAndPeanutsWarningText = "*NUTS AND PEANUTS ARE USED HERE*"
@@ -129,6 +216,28 @@ func displayNutsAndPeanutsWarning(_ text: String) -> String {
 
 func stationWarningDisplayText(for node: MenuNode) -> String {
     displayNutsAndPeanutsWarning(node.name)
+}
+
+func expiredMealNames(for chosenDate: String, now: Date = .now) -> Set<String> {
+    guard chosenDate == DiningFetcher.formatDate(now) else {
+        return []
+    }
+
+    switch Calendar.current.component(.hour, from: now) {
+    case 11...16:
+        return ["Breakfast"]
+    case 17...24:
+        return ["Breakfast", "Lunch", "Brunch"]
+    default:
+        return []
+    }
+}
+
+func visibleMealNames(from meals: [String], chosenDate: String, now: Date = .now) -> [String] {
+    let expired = expiredMealNames(for: chosenDate, now: now)
+    return meals
+        .filter { !expired.contains($0) }
+        .sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }
 }
 
 // MARK: - Wrapper

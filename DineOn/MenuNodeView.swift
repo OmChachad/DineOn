@@ -12,20 +12,25 @@ struct MenuNodeView: View {
     
     let node: MenuNode
     let chosenDate: String
+
+    private var visibilityPreferences: MenuVisibilityPreferences {
+        MenuVisibilityPreferences(preferences: preferences)
+    }
     
     var body: some View {
         Group {
             switch node.type {
             case .item:
-                if shouldDisplayNode(node) && itemFitsPreferences(node) {
+                if shouldDisplayNode(node, preferences: visibilityPreferences)
+                    && itemFitsPreferences(node, preferences: visibilityPreferences) {
                     MenuItemView(node: node, chosenDate: chosenDate)
                 }
             case .info:
-                if shouldDisplayNode(node) {
+                if shouldDisplayNode(node, preferences: visibilityPreferences) {
                     MenuInfoView(node: node, chosenDate: chosenDate)
                 }
             case .header, .timeHeader:
-                if shouldDisplayNode(node), let items = node.items, !items.isEmpty {
+                if shouldDisplayNode(node, preferences: visibilityPreferences), let items = node.items, !items.isEmpty {
                     IndentedDisclosureGroup(expandedByDefault: true) {
                         ForEach(items, id: \.name) { item in
                             MenuNodeView(node: item, chosenDate: chosenDate)
@@ -34,55 +39,13 @@ struct MenuNodeView: View {
                     } label: {
                         MenuHeaderLabel(node: node, chosenDate: chosenDate)
                     }
-                } else if shouldDisplayNode(node) {
+                } else if shouldDisplayNode(node, preferences: visibilityPreferences) {
                     MenuHeaderLabel(node: node, chosenDate: chosenDate)
                 }
             }
         }
         
             .environmentObject(preferences)
-    }
-
-    func shouldDisplayNode(_ node: MenuNode) -> Bool {
-        preferences.hasAAZAccess || !isAAZNode(node)
-    }
-    
-    func itemFitsPreferences(_ node: MenuNode) -> Bool {
-        // Allergens: reject if the food contains any selected allergen
-        for keyword in preferences.excludedKeywords {
-            if node.name.lowercased().contains(keyword.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)) {
-                return false
-            }
-        }
-        
-        guard node.allergens?.contains(.notAnalyzed) == false else {
-            return true
-        }
-        
-        let selectedAllergens = preferences.selectedAllergens.compactMap { Allergen(rawValue: $0) }
-        
-        if (node.allergens ?? []).contains(where: { selectedAllergens.contains($0) }) {
-            return false
-        }
-        
-        // Dietary preferences: only check if user has enabled dietary restrictions
-        if preferences.hasDietaryRestrictions {
-            let selectedPreferences = preferences.selectedDietaryPreferences.compactMap { DietaryPreference(rawValue: $0) }
-            let nodePreferences = node.preferences ?? []
-            // Food must meet *all* selected dietary preferences
-            for pref in selectedPreferences {
-                switch pref {
-                case .vegetarian:
-                    return nodePreferences.contains(.vegetarian) || nodePreferences.contains(.vegan)
-                case .vegan:
-                    return nodePreferences.contains(.vegan)
-                default:
-                    return nodePreferences.contains(pref)
-                }
-            }
-        }
-        
-        return true
     }
 }
 

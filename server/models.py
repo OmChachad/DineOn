@@ -146,3 +146,195 @@ class NutritionProfileResponse(StrictModel):
                 items.append(normalized)
         return items
 
+
+class SuggestionsPreferences(StrictModel):
+    has_aaz_access: bool = False
+    has_dietary_restrictions: bool = False
+    selected_allergens: list[str] = Field(default_factory=list)
+    selected_dietary_preferences: list[str] = Field(default_factory=list)
+    excluded_keywords: list[str] = Field(default_factory=list)
+    favorite_dishes: list[str] = Field(default_factory=list)
+
+    @field_validator(
+        "selected_allergens",
+        "selected_dietary_preferences",
+        "excluded_keywords",
+        "favorite_dishes",
+        mode="before",
+    )
+    @classmethod
+    def clean_preference_list(cls, value: list[str] | None) -> list[str]:
+        if not value:
+            return []
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            normalized = " ".join((item or "").split())
+            key = normalized.casefold()
+            if normalized and key not in seen:
+                seen.add(key)
+                cleaned.append(normalized)
+        return cleaned
+
+
+class SuggestionsHealthContext(HealthKitSnapshot):
+    active_calories_today: float | None = Field(default=None, ge=0, le=10000)
+
+
+class SuggestionsClientContext(StrictModel):
+    consumed_meal_keys: list[str] = Field(default_factory=list)
+
+    @field_validator("consumed_meal_keys", mode="before")
+    @classmethod
+    def clean_meal_keys(cls, value: list[str] | None) -> list[str]:
+        if not value:
+            return []
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            normalized = " ".join((item or "").split())
+            key = normalized.casefold()
+            if normalized and key not in seen:
+                seen.add(key)
+                cleaned.append(normalized)
+        return cleaned
+
+
+class SuggestionsRequest(StrictModel):
+    schema_version: int = Field(default=SCHEMA_VERSION)
+    date: str
+    meal_slots: list[str] = Field(default_factory=list)
+    preferences: SuggestionsPreferences = Field(default_factory=SuggestionsPreferences)
+    nutrition_profile: NutritionProfileResponse | None = None
+    healthkit: SuggestionsHealthContext = Field(default_factory=SuggestionsHealthContext)
+    menu_export: str
+    client_context: SuggestionsClientContext = Field(default_factory=SuggestionsClientContext)
+
+    @field_validator("date")
+    @classmethod
+    def validate_date(cls, value: str) -> str:
+        normalized = " ".join((value or "").split())
+        try:
+            datetime.strptime(normalized, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError("date must use YYYY-MM-DD format.") from exc
+        return normalized
+
+    @field_validator("meal_slots", mode="before")
+    @classmethod
+    def clean_meal_slots(cls, value: list[str] | None) -> list[str]:
+        if not value:
+            return []
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            normalized = " ".join((item or "").split())
+            key = normalized.casefold()
+            if normalized and key not in seen:
+                seen.add(key)
+                cleaned.append(normalized)
+        return cleaned
+
+    @field_validator("menu_export")
+    @classmethod
+    def clean_menu_export(cls, value: str) -> str:
+        normalized = value.strip()
+        if not normalized:
+            raise ValueError("menu_export is required.")
+        return normalized
+
+    @model_validator(mode="after")
+    def ensure_request_is_actionable(self) -> "SuggestionsRequest":
+        if self.schema_version != SCHEMA_VERSION:
+            raise ValueError(f"Unsupported schema_version: {self.schema_version}")
+        if not self.meal_slots:
+            raise ValueError("At least one meal slot is required.")
+        return self
+
+
+class MealSuggestion(StrictModel):
+    meal: str
+    meal_key: str
+    venue: str
+    items: list[str] = Field(default_factory=list)
+    estimated_calories: int | None = Field(default=None, ge=0, le=10000)
+    estimated_protein_g: int | None = Field(default=None, ge=0, le=1000)
+    estimated_carbs_g: int | None = Field(default=None, ge=0, le=1000)
+    estimated_fat_g: int | None = Field(default=None, ge=0, le=500)
+    rationale: str
+    optional_caution: str | None = None
+
+    @field_validator("meal", "meal_key", "venue", "rationale")
+    @classmethod
+    def clean_required_text(cls, value: str) -> str:
+        normalized = " ".join((value or "").split())
+        if not normalized:
+            raise ValueError("Field must not be empty.")
+        return normalized
+
+    @field_validator("optional_caution")
+    @classmethod
+    def clean_optional_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        normalized = " ".join(value.split())
+        return normalized or None
+
+    @field_validator("items", mode="before")
+    @classmethod
+    def clean_items(cls, value: list[str] | None) -> list[str]:
+        if not value:
+            return []
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            normalized = " ".join((item or "").split())
+            key = normalized.casefold()
+            if normalized and key not in seen:
+                seen.add(key)
+                cleaned.append(normalized)
+        return cleaned
+
+
+class SuggestionsResponse(StrictModel):
+    schema_version: int = Field(default=SCHEMA_VERSION)
+    generated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    date: str
+    daily_calorie_target: int | None = Field(default=None, ge=0, le=10000)
+    active_calories_today: int | None = Field(default=None, ge=0, le=10000)
+    meals: list[MealSuggestion] = Field(default_factory=list)
+    summary: str
+    warnings: list[str] = Field(default_factory=list)
+
+    @field_validator("date")
+    @classmethod
+    def validate_response_date(cls, value: str) -> str:
+        normalized = " ".join((value or "").split())
+        try:
+            datetime.strptime(normalized, "%Y-%m-%d")
+        except ValueError as exc:
+            raise ValueError("date must use YYYY-MM-DD format.") from exc
+        return normalized
+
+    @field_validator("summary")
+    @classmethod
+    def clean_summary(cls, value: str) -> str:
+        normalized = " ".join((value or "").split())
+        if not normalized:
+            raise ValueError("summary is required.")
+        return normalized
+
+    @field_validator("warnings", mode="before")
+    @classmethod
+    def clean_warnings(cls, value: list[str] | None) -> list[str]:
+        if not value:
+            return []
+        cleaned: list[str] = []
+        seen: set[str] = set()
+        for item in value:
+            normalized = " ".join((item or "").split())
+            key = normalized.casefold()
+            if normalized and key not in seen:
+                seen.add(key)
+                cleaned.append(normalized)
+        return cleaned
