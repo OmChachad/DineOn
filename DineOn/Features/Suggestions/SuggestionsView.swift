@@ -32,6 +32,7 @@ struct SuggestionsView: View {
                 contentSection
             }
             .padding(16)
+            .padding(.top, 30)
         }
         .navigationTitle("Suggestions")
         .navigationBarTitleDisplayMode(.inline)
@@ -56,37 +57,11 @@ struct SuggestionsView: View {
                 .font(.headline)
 
             HStack(alignment: .top, spacing: 14) {
-                if viewModel.isTodaySelected,
-                   let activeCalories = viewModel.activeCaloriesToday,
-                   let targetCalories = viewModel.dailyCalorieTarget,
-                   targetCalories > 0 {
-                    ProgressRingCard(
-                        title: "Active Burn",
-                        valueText: "\(activeCalories)",
-                        subtitle: "of \(targetCalories) target",
-                        progress: min(Double(activeCalories) / Double(targetCalories), 1.0)
-                    )
-                } else {
-                    MetricCard(
-                        title: "Daily Target",
-                        valueText: viewModel.dailyCalorieTarget.map(String.init) ?? "Unavailable",
-                        subtitle: viewModel.isTodaySelected ? "Connect HealthKit or save a nutrition profile." : "Used to score this date's suggestions."
-                    )
-                }
-
-                VStack(spacing: 12) {
-                    MetricCard(
-                        title: "Consumed",
-                        valueText: "\(viewModel.consumedCalories)",
-                        subtitle: "Estimated calories marked as eaten"
-                    )
-
-                    MetricCard(
-                        title: "Recommended Meals",
-                        valueText: "\(viewModel.visibleSuggestions.count)",
-                        subtitle: "Visible meals for this date"
-                    )
-                }
+                MetricCard(
+                    title: "Consumed",
+                    valueText: "\(viewModel.consumedCalories)",
+                    subtitle: "Estimated calories marked as eaten"
+                )
             }
         }
     }
@@ -104,7 +79,8 @@ struct SuggestionsView: View {
                 ForEach(viewModel.visibleSuggestions) { suggestion in
                     SuggestionMealCard(
                         suggestion: suggestion,
-                        isConsumed: viewModel.isConsumed(suggestion)
+                        isConsumed: viewModel.isConsumed(suggestion),
+                        canToggleConsumed: viewModel.canMarkMealsConsumed
                     ) {
                         viewModel.toggleConsumed(suggestion)
                     }
@@ -164,6 +140,7 @@ struct SuggestionsView: View {
 private struct SuggestionMealCard: View {
     let suggestion: MealSuggestion
     let isConsumed: Bool
+    let canToggleConsumed: Bool
     let action: () -> Void
 
     var body: some View {
@@ -178,13 +155,16 @@ private struct SuggestionMealCard: View {
                 }
 
                 Spacer()
-
-                Text(isConsumed ? "Consumed" : "Suggested")
-                    .font(.caption.weight(.semibold))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(isConsumed ? Color.green.opacity(0.18) : Color.accentColor.opacity(0.14), in: Capsule())
-                    .foregroundStyle(isConsumed ? .green : .accentColor)
+                
+                Button(action: action) {
+                    Text(buttonTitle)
+                        .font(.caption.weight(.semibold))
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                }
+                .buttonStyle(.glassProminent)
+                .tint(buttonTint)
+                .disabled(!canToggleConsumed)
             }
 
             VStack(alignment: .leading, spacing: 8) {
@@ -215,18 +195,10 @@ private struct SuggestionMealCard: View {
 
             if let caution = suggestion.optionalCaution, !caution.isEmpty {
                 Text(caution)
+                    .italic()
                     .font(.footnote)
                     .foregroundStyle(.orange)
             }
-
-            Button(action: action) {
-                Text(isConsumed ? "Mark as Not Consumed" : "Mark as Consumed")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 12)
-                    .background(isConsumed ? Color.green.opacity(0.18) : Color.accentColor.opacity(0.14), in: RoundedRectangle(cornerRadius: 16, style: .continuous))
-            }
-            .buttonStyle(.plain)
         }
         .padding(18)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -241,9 +213,24 @@ private struct SuggestionMealCard: View {
             Text(value)
                 .font(.subheadline.weight(.semibold))
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.primary.opacity(0.06), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+    }
+
+    private var buttonTitle: String {
+        if !canToggleConsumed {
+            return "Future Meal"
+        }
+        return isConsumed ? "Consumed" : "Mark Consumed"
+    }
+
+    private var buttonTint: Color {
+        if !canToggleConsumed {
+            return .secondary
+        }
+        return isConsumed ? .green : .accentColor
     }
 }
 
@@ -257,8 +244,11 @@ private struct MetricCard: View {
             Text(title)
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(.secondary)
+            
             Text(valueText)
                 .font(.title2.weight(.semibold))
+                .contentTransition(.numericText())
+            
             Text(subtitle)
                 .font(.caption)
                 .foregroundStyle(.secondary)
