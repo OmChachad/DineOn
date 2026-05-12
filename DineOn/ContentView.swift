@@ -355,7 +355,7 @@ struct StationHeaderLabel: View {
             if let warningText, !warningText.isEmpty {
                 Text(warningText)
                     .font(.subheadline.weight(.medium))
-                    .foregroundStyle(Color.yellow.opacity(0.72))
+                    .foregroundStyle(Color.yellow)
                     .multilineTextAlignment(.leading)
             }
 
