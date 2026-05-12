@@ -108,15 +108,15 @@ struct ContentView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    if let venue = selectedVenue {
-                        Button {
+                    Button {
+                        if let venue = selectedVenue {
                             feedbackURL = venue.feedbackURL
                             isShowingFeedbackSheet = true
-                        } label: {
-                            Image(systemName: "exclamationmark.bubble")
                         }
-                        .accessibilityLabel("Open \(venue.shortName) feedback form")
+                    } label: {
+                        Image(systemName: "exclamationmark.bubble")
                     }
+                    .accessibilityLabel("Open \(selectedVenue?.shortName ?? "") feedback form")
                 }
             }
             .navigationTitle("DineOn")
