@@ -6,6 +6,7 @@
 //
 
 import SwiftUI
+import SafariServices
 
 struct ContentView: View {
     @ObservedObject var fetcher = DiningFetcher.shared
@@ -15,6 +16,8 @@ struct ContentView: View {
     @State private var chosenDate: String = DiningFetcher.formatDate(Date())
     @State private var chosenMeal: String? = nil
     @State private var chosenTab: String = ""
+    @State private var feedbackURL: URL?
+    @State private var isShowingFeedbackSheet = false
 
     @Environment(\.horizontalSizeClass) var horizontalSizeClass
 
@@ -50,6 +53,10 @@ struct ContentView: View {
     private func availableMeals(for venueName: String) -> [String] {
         (fetcher.menuData[chosenDate]?[venueName]?.keys
             .sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }) ?? []
+    }
+
+    private var selectedVenue: DiningVenue? {
+        DiningVenue(rawValue: chosenTab)
     }
 
     // MARK: - Meal auto-selection
@@ -100,10 +107,27 @@ struct ContentView: View {
                 .padding(.horizontal, 20)
             }
             .toolbar {
-                
+                ToolbarItem(placement: .topBarLeading) {
+                    if let venue = selectedVenue {
+                        Button {
+                            feedbackURL = venue.feedbackURL
+                            isShowingFeedbackSheet = true
+                        } label: {
+                            Image(systemName: "exclamationmark.bubble")
+                        }
+                        .accessibilityLabel("Open \(venue.shortName) feedback form")
+                    }
+                }
             }
             .navigationTitle("DineOn")
             .navigationBarTitleDisplayMode(.inline)
+        }
+        .sheet(isPresented: $isShowingFeedbackSheet, onDismiss: {
+            feedbackURL = nil
+        }) {
+            if let feedbackURL {
+                SafariSheet(url: feedbackURL)
+            }
         }
         .environment(\.horizontalSizeClass, .compact)
         .task(id: chosenDate) {
@@ -271,6 +295,8 @@ struct ContentView: View {
         return formatter.date(from: string)
     }
 }
+
+
 
 // MARK: - MealContentView
 

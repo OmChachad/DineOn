@@ -50,4 +50,16 @@ enum DiningVenue: String, CaseIterable {
         case .evk:      return CLLocation(latitude: 34.021435, longitude: -118.282249)
         }
     }
+
+    /// EasyCode feedback form for the venue.
+    var feedbackURL: URL {
+        switch self {
+        case .village:
+            return URL(string: "https://easycode.com/uscvillage")!
+        case .parkside:
+            return URL(string: "https://easycode.com/uscparkside")!
+        case .evk:
+            return URL(string: "https://easycode.com/evk")!
+        }
+    }
 }
