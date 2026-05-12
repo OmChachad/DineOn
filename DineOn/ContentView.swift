@@ -64,7 +64,7 @@ struct ContentView: View {
     private var currentMealForTimeOfDay: String {
         switch Calendar.current.component(.hour, from: Date()) {
         case 0...10: return "Breakfast"
-        case 11...16: return "Lunch"
+        case 11...15: return "Lunch"
         default: return "Dinner"
         }
     }
