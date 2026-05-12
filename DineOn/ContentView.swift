@@ -77,6 +77,10 @@ struct ContentView: View {
         return meals.sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }.first ?? preferred
     }
 
+    private func refreshMenu() async {
+        await fetcher.refresh(for: chosenDate)
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -152,26 +156,32 @@ struct ContentView: View {
             case .loading where fetcher.menuData[chosenDate] == nil:
                 ProgressView("Loading menu…")
             case .noMenu:
-                ContentUnavailableView(
-                    "No Menu Available",
-                    systemImage: "fork.knife.circle",
-                    description: Text("No menus were found for this date.")
-                )
+                ContentUnavailableView {
+                    Label("No Menu Available", systemImage: "fork.knife.circle")
+                } description: {
+                    Text("No menus were found for this date.")
+                } actions: {
+                    refreshButton()
+                }
             case .error(let message):
-                ContentUnavailableView(
-                    "Couldn't Load Menu",
-                    systemImage: "wifi.slash",
-                    description: Text(message)
-                )
+                ContentUnavailableView {
+                    Label("Couldn't Load Menu", systemImage: "wifi.slash")
+                } description: {
+                    Text(message)
+                } actions: {
+                    refreshButton()
+                }
             case .idle:
                 ProgressView("Loading menu…")
             default:
                 if meals.isEmpty {
-                    ContentUnavailableView(
-                        "No Menu Available",
-                        systemImage: "fork.knife.circle",
-                        description: Text("No meals are being served at \(venue.shortName) on this day.")
-                    )
+                    ContentUnavailableView {
+                        Label("No Menu Available", systemImage: "fork.knife.circle")
+                    } description: {
+                        Text("No meals are being served at \(venue.shortName) on this day.")
+                    } actions: {
+                        refreshButton()
+                    }
                 } else {
                     ScrollView {
                         LazyVStack(pinnedViews: [.sectionHeaders]) {
@@ -185,12 +195,21 @@ struct ContentView: View {
             }
         }
         .refreshable {
-            await fetcher.refresh(for: chosenDate)
+            await refreshMenu()
         }
         .safeAreaBar(edge: .bottom) {
             if !meals.isEmpty {
                 mealSelector(availableMeals: meals, activeMeal: activeMeal)
                     .padding(20)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func refreshButton() -> some View {
+        Button("Refresh") {
+            Task {
+                await refreshMenu()
             }
         }
     }
