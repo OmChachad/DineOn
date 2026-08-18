@@ -162,10 +162,11 @@ struct ContentView: View {
         let meals = availableMeals(for: venue.rawValue)
         let activeMeal = effectiveMeal(for: meals)
 
-        Group {
+        ScrollView {
             switch fetchState {
             case .loading where fetcher.menuData[chosenDate] == nil:
                 ProgressView("Loading menu…")
+                    .containerRelativeFrame([.horizontal, .vertical])
             case .noMenu:
                 ContentUnavailableView {
                     Label("No Menu Available", systemImage: "fork.knife.circle")
@@ -174,6 +175,7 @@ struct ContentView: View {
                 } actions: {
                     refreshButton()
                 }
+                .containerRelativeFrame([.horizontal, .vertical])
             case .error(let message):
                 ContentUnavailableView {
                     Label("Couldn't Load Menu", systemImage: "wifi.slash")
@@ -182,8 +184,10 @@ struct ContentView: View {
                 } actions: {
                     refreshButton()
                 }
+                .containerRelativeFrame([.horizontal, .vertical])
             case .idle:
                 ProgressView("Loading menu…")
+                    .containerRelativeFrame([.horizontal, .vertical])
             default:
                 if meals.isEmpty {
                     ContentUnavailableView {
@@ -193,18 +197,17 @@ struct ContentView: View {
                     } actions: {
                         refreshButton()
                     }
+                    .containerRelativeFrame([.horizontal, .vertical])
                 } else {
-                    ScrollView {
-                        LazyVStack(pinnedViews: [.sectionHeaders]) {
-                            MealContentView(meal: activeMeal, venueName: venue.rawValue, chosenDate: chosenDate)
-                                .padding()
-                        }
+                    LazyVStack(pinnedViews: [.sectionHeaders]) {
+                        MealContentView(meal: activeMeal, venueName: venue.rawValue, chosenDate: chosenDate)
+                            .padding()
                     }
-                    .contentMargins(.top, 50, for: .scrollIndicators)
-                    .contentMargins(.top, 50, for: .scrollContent)
                 }
             }
         }
+        .contentMargins(.top, 50, for: .scrollIndicators)
+        .contentMargins(.top, 50, for: .scrollContent)
         .refreshable {
             await refreshMenu()
         }
