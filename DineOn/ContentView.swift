@@ -211,6 +211,7 @@ struct ContentView: View {
         .safeAreaBar(edge: .bottom) {
             if !meals.isEmpty {
                 mealSelector(availableMeals: meals, activeMeal: activeMeal)
+                    .transition(.blurReplace)
                     .padding(20)
             }
         }
