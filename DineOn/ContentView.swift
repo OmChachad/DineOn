@@ -55,8 +55,16 @@ struct ContentView: View {
             .sorted { (mealOrder[$0] ?? 99) < (mealOrder[$1] ?? 99) }) ?? []
     }
 
+    private var defaultVenue: DiningVenue? {
+        sortedVenues.first
+    }
+
     private var selectedVenue: DiningVenue? {
-        DiningVenue(rawValue: chosenTab)
+        DiningVenue(rawValue: chosenTab) ?? defaultVenue
+    }
+
+    private var toolbarVenue: DiningVenue? {
+        chosenTab == "Settings" ? nil : selectedVenue
     }
 
     // MARK: - Meal auto-selection
@@ -112,15 +120,15 @@ struct ContentView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        if let venue = selectedVenue {
+                    if let venue = toolbarVenue {
+                        Button {
                             feedbackURL = venue.feedbackURL
                             isShowingFeedbackSheet = true
+                        } label: {
+                            Image(systemName: "exclamationmark.bubble")
                         }
-                    } label: {
-                        Image(systemName: "exclamationmark.bubble")
+                        .accessibilityLabel("Open \(venue.shortName) feedback form")
                     }
-                    .accessibilityLabel("Open \(selectedVenue?.shortName ?? "") feedback form")
                 }
             }
             .navigationTitle("DineOn")
@@ -140,6 +148,9 @@ struct ContentView: View {
         }
         .task {
             locationManager.requestLocationPermission()
+            if chosenTab.isEmpty, let defaultVenue {
+                chosenTab = defaultVenue.rawValue
+            }
         }
         .animation(.default, value: chosenTab)
     }
